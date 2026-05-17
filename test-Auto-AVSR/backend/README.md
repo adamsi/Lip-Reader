@@ -58,7 +58,7 @@ Auto-AVSR checkpoints are documented in the repository model zoo. For visual spe
 
 The tutorial notebook in `auto_avsr/tutorials/inference.ipynb` downloads that checkpoint from:
 
-- `http://www.doc.ic.ac.uk/~pm4115/autoAVSR/vsr_trlrs3_base.pth`
+- `https://drive.google.com/file/d/1V7kMt7bYG0ripou_6QvZIAG_fwbQw2Td/view?usp=drive_link`
 
 Download it and place it at:
 
