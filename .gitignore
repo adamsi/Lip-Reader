@@ -4,6 +4,7 @@
 
 # LangGraph
 .langgraph_api/
+node_modules/
 **/.env
 **/.env.*
 .venv/
@@ -13,3 +14,8 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+test-Auto-AVSR/backend/checkpoints/*.pth
+test-Auto-AVSR/backend/checkpoints/*.pt
+test-Auto-AVSR/backend/checkpoints/*.ckpt
+test-Auto-AVSR/backend/checkpoints/*.bin
+test-Auto-AVSR/backend/checkpoints/*.safetensors
