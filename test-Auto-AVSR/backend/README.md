@@ -3,7 +3,7 @@
 This demo has:
 
 - `backend/main.py`: FastAPI server with `POST /transcribe`
-- `backend/auto_avsr_infer.py`: subprocess target that runs real Auto-AVSR inference on a single uploaded MP4
+- `backend/auto_avsr_infer.py`: subprocess target that runs real Auto-AVSR inference on a single uploaded video file
 - `frontend/`: React + TypeScript + Vite upload UI
 - `backend/.env`: backend config
 - `frontend/.env`: frontend API URL config
@@ -18,36 +18,36 @@ git clone https://github.com/mpc001/auto_avsr.git ./auto_avsr
 
 ## 2. Create a Python virtual environment
 
-From the project root:
+From the project root in Git Bash:
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
+```bash
+"/c/Users/adams/AppData/Local/Programs/Python/Python311/python.exe" -m venv .venv
+source .venv/Scripts/activate
+python -m pip install --upgrade pip setuptools wheel
 ```
+
+If Python 3.11 is installed somewhere else on your machine, use that interpreter path instead of the example above.
 
 ## 3. Install backend requirements
 
-Install the FastAPI server dependencies:
+Install the backend dependencies from the single requirements file:
 
-```powershell
-pip install -r backend\requirements.txt
+```bash
+pip install -r backend/requirements.txt
 ```
 
-Install Auto-AVSR runtime dependencies. The repository README currently lists `torch`, `torchvision`, `torchaudio`, `pytorch-lightning`, `sentencepiece`, and `av`, and the preprocessing README adds `opencv-python`, `ffmpeg-python`, and `scikit-image`. For lip-reading on a raw MP4, you also need a face detector. This demo defaults to `mediapipe` because it is simpler than RetinaFace for a local CPU setup:
+Install the Auto-AVSR preparation dependencies:
 
-```powershell
-pip install torch torchvision torchaudio pytorch-lightning sentencepiece av
-pip install -r auto_avsr\preparation\requirements.txt
-pip install mediapipe
+```bash
+pip install -r auto_avsr/preparation/requirements.txt
 ```
 
 If you want to try RetinaFace instead of MediaPipe:
 
-```powershell
-cd auto_avsr\preparation\tools
+```bash
+cd auto_avsr/preparation/tools
 pip install -r requirements.txt
-cd ..\..\..
+cd ../../..
 ```
 
 ## 4. Download and place a checkpoint
@@ -72,7 +72,7 @@ That matches the default `CHECKPOINT_PATH` already set in `backend/.env`, so you
 
 From the project root, with the virtualenv still activated:
 
-```powershell
+```bash
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -88,7 +88,7 @@ It expects multipart form data with a file field named `file`.
 
 From the project root:
 
-```powershell
+```bash
 cd frontend
 npm install
 npm run dev
@@ -107,4 +107,4 @@ Open the local Vite URL shown in the terminal, typically:
 - This demo uses the real Auto-AVSR model and its beam search decoder. It does not fake inference.
 - The `score` values returned in `top_k` are decoder beam scores, not calibrated probabilities.
 - If a future Auto-AVSR version only exposes the single best transcript, the helper script already includes a TODO showing where to return rank 1 and where beam candidates would need to be exposed.
-- Raw MP4 lip-reading quality depends heavily on face visibility, clip length, and detector success. Short, frontal, well-lit talking-head clips work best.
+- Raw video lip-reading quality depends heavily on face visibility, clip length, and detector success. Short, frontal, well-lit talking-head clips work best.

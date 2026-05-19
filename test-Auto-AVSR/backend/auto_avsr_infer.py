@@ -79,11 +79,28 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def load_video_frames(video_path: str) -> np.ndarray:
+    import av
+
+    frames = []
+    with av.open(video_path) as container:
+        video_stream = next((stream for stream in container.streams if stream.type == "video"), None)
+        if video_stream is None:
+            raise ValueError(f"No video stream found in file: {video_path}")
+
+        for frame in container.decode(video=0):
+            frames.append(frame.to_ndarray(format="rgb24"))
+
+    if not frames:
+        raise ValueError(f"No video frames could be decoded from file: {video_path}")
+
+    return np.stack(frames, axis=0)
+
+
 def load_video_pipeline(repo_path: Path, checkpoint_path: Path, detector: str):
     sys.path.insert(0, str(repo_path))
 
     import torch
-    import torchvision
     from datamodule.transforms import VideoTransform
     from lightning import ModelModule, get_beam_search_decoder
 
@@ -105,7 +122,7 @@ def load_video_pipeline(repo_path: Path, checkpoint_path: Path, detector: str):
     video_transform = VideoTransform(subset="test")
 
     def load_video(video_path: str):
-        return torchvision.io.read_video(video_path, pts_unit="sec")[0].numpy()
+        return load_video_frames(video_path)
 
     def infer(video_path: str, beam_size: int) -> dict:
         video = load_video(video_path)

@@ -1,1 +1,1 @@
-"""Initialize sub package."""
+"""Scorers for the local ESPnet subset."""

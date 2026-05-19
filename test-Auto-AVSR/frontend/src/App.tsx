@@ -8,6 +8,14 @@ type TranscriptionResponse = {
   }>;
 };
 
+const SUPPORTED_VIDEO_EXTENSIONS = [".mp4", ".m4v", ".mov", ".avi", ".mkv", ".webm", ".mpeg", ".mpg"];
+
+function isSupportedVideoFile(file: File): boolean {
+  const lowerName = file.name.toLowerCase();
+  if (SUPPORTED_VIDEO_EXTENSIONS.some((ext) => lowerName.endsWith(ext))) return true;
+  return file.type.startsWith("video/");
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -46,8 +54,8 @@ export default function App() {
   }, [file]);
 
   function onFileChange(next: File | null) {
-    if (next && !next.name.toLowerCase().endsWith(".mp4")) {
-      setError("Please choose an MP4 video file.");
+    if (next && !isSupportedVideoFile(next)) {
+      setError("Please choose a supported video file, such as MP4, MPG, MOV, AVI, MKV, or WebM.");
       return;
     }
     applyFile(next);
@@ -62,7 +70,7 @@ export default function App() {
 
   async function handleSubmit() {
     if (!file) {
-      setError("Drop or choose an MP4 clip first.");
+      setError("Drop or choose a video clip first.");
       return;
     }
 
@@ -141,12 +149,12 @@ export default function App() {
             }}
             role="button"
             tabIndex={0}
-            aria-label="Upload MP4 video"
+            aria-label="Upload video"
           >
             <input
               ref={inputRef}
               type="file"
-              accept="video/mp4"
+              accept="video/*,.mp4,.m4v,.mov,.avi,.mkv,.webm,.mpeg,.mpg"
               className="sr-only"
               onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
             />
@@ -160,7 +168,7 @@ export default function App() {
                     <path d="M24 27v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                 </div>
-                <p className="dropzone-title">Drop your MP4 here</p>
+                <p className="dropzone-title">Drop your video here</p>
                 <p className="dropzone-sub">or click to browse · frontal, well-lit clips work best</p>
               </div>
             ) : (

@@ -1,1 +1,1 @@
-"""Initialize sub package."""
+"""Transformer components for the local ESPnet subset."""

@@ -13,6 +13,26 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
+SUPPORTED_VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".m4v",
+    ".mov",
+    ".avi",
+    ".mkv",
+    ".webm",
+    ".mpeg",
+    ".mpg",
+}
+CONTENT_TYPE_SUFFIX_MAP = {
+    "video/mp4": ".mp4",
+    "video/x-m4v": ".m4v",
+    "video/quicktime": ".mov",
+    "video/x-msvideo": ".avi",
+    "video/x-matroska": ".mkv",
+    "video/webm": ".webm",
+    "video/mpeg": ".mpeg",
+}
+
 
 def resolve_env_path(value: str, default: Path) -> Path:
     if not value:
@@ -52,19 +72,37 @@ def health() -> dict:
     return {"ok": True}
 
 
+def is_supported_video_upload(file: UploadFile) -> bool:
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix in SUPPORTED_VIDEO_EXTENSIONS:
+        return True
+    return bool(file.content_type and file.content_type.startswith("video/"))
+
+
+def temp_suffix_for_upload(file: UploadFile) -> str:
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix:
+        return suffix
+    return CONTENT_TYPE_SUFFIX_MAP.get(file.content_type or "", ".mp4")
+
+
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)) -> dict:
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing filename.")
-    if not file.filename.lower().endswith(".mp4"):
-        raise HTTPException(status_code=400, detail="Only .mp4 files are supported.")
+    if not is_supported_video_upload(file):
+        supported = ", ".join(sorted(SUPPORTED_VIDEO_EXTENSIONS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported video format. Supported extensions: {supported}",
+        )
     if not Path(CHECKPOINT_PATH).exists():
         raise HTTPException(
             status_code=500,
             detail=f"Checkpoint file not found: {CHECKPOINT_PATH}",
         )
 
-    suffix = Path(file.filename).suffix or ".mp4"
+    suffix = temp_suffix_for_upload(file)
     temp_path: str | None = None
 
     try:
