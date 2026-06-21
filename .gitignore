@@ -1,21 +1,34 @@
-# gitignore template for LangChain products, e.g., LangGraph, LangSmith
-# website: https://www.langchain.com/
-# website: https://www.langchain.com/langgraph
+# Model weights & large binaries
+weights/
+benchmarks/
+test videos/*.mov
+old deprecated test videos/
+SRAVI test videos/**/*.mov
 
-# LangGraph
-.langgraph_api/
-node_modules/
-**/.env
-**/.env.*
-.venv/
-.idea/
-.vscode/
+# Debug artifacts
+debug_crop*.jpg
+lipreader.log
+learned_mappings.json
+
+# IDE
+.cursor/
+.DS_Store
+
+# Secrets
+.env
+
+# Backend runtime artifacts
+backend/chaplin.db
+backend/storage/
+
+# Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-test-Auto-AVSR/backend/checkpoints/*.pth
-test-Auto-AVSR/backend/checkpoints/*.pt
-test-Auto-AVSR/backend/checkpoints/*.ckpt
-test-Auto-AVSR/backend/checkpoints/*.bin
-test-Auto-AVSR/backend/checkpoints/*.safetensors
+.venv/
+
+# uv
+uv.lock
+
+# Unused VALLR code
+models/
+vallr_pipeline.py

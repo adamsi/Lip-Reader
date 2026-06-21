@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+*.local
+
+# Capacitor native platforms (generated)
+android/
+ios/
