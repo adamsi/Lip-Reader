@@ -39,7 +39,7 @@ app.add_middleware(
 )
 
 # Friendly message shown when we can't read a clip (no face / no speech).
-_DIDNT_CATCH = "Didn't catch that - tap Repeat and try again."
+_DIDNT_CATCH = "I didn't catch that. Please try again."
 
 
 class SpeakBody(BaseModel):

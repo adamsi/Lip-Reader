@@ -17,3 +17,18 @@ body {
   /* Full-bleed (TalkScreen's camera fills the viewport); individual screens
      apply env(safe-area-inset-*) where their chrome needs it. */
 }
+
+/* "Appears on screen" entrance for the result text + Speak button. */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-pop {
+  animation: popIn 0.28s ease-out both;
+}

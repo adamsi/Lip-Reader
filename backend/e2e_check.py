@@ -108,7 +108,7 @@ def main() -> int:
         if os.path.exists(clip_path):
             os.remove(clip_path)
 
-    speak_text = text if ok["transcribe"] and "Didn't catch" not in text else "Hello from Chaplin."
+    speak_text = text if ok["transcribe"] and "didn't catch" not in text.lower() else "Hello from Chaplin."
 
     step("4/4  POST /speak")
     r = client.post("/speak", headers=headers, json={"text": speak_text})
