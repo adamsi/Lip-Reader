@@ -88,6 +88,16 @@ export function useRecorder() {
     });
   }, []);
 
+  // Turn the camera/mic off (releases the hardware light immediately).
+  const stopCamera = useCallback(() => {
+    recorderRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoElRef.current) videoElRef.current.srcObject = null;
+    setState("idle");
+    setError(null);
+  }, []);
+
   // Release the camera/mic when the component using the hook unmounts.
   useEffect(() => {
     return () => {
@@ -96,5 +106,5 @@ export function useRecorder() {
     };
   }, []);
 
-  return { state, error, start, stop, attachPreview, startCamera: ensureStream };
+  return { state, error, start, stop, attachPreview, startCamera: ensureStream, stopCamera };
 }

@@ -6,7 +6,6 @@ import AboutModal from "./AboutModal";
 import RunAgentPanel from "./RunAgentPanel";
 import Spinner from "./Spinner";
 import StepsTrace from "./StepsTrace";
-import UserMenu from "./UserMenu";
 
 // Simple communication-turn loop:
 //   idle ── Talk ──▶ recording ── Stop ──▶ thinking ──▶ review
@@ -16,8 +15,9 @@ import UserMenu from "./UserMenu";
 type Phase = "idle" | "recording" | "thinking" | "review" | "speaking";
 
 export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => void }) {
-  const { error, start, stop, attachPreview, startCamera } = useRecorder();
+  const { error, start, stop, attachPreview, startCamera, stopCamera } = useRecorder();
   const [phase, setPhase] = useState<Phase>("idle");
+  const [cameraOn, setCameraOn] = useState(false); // camera is opt-in, default off
   const [text, setText] = useState("");
   const [tokens, setTokens] = useState<SpokenToken[]>([]);
   const [spoken, setSpoken] = useState(0); // count of tokens revealed so far
@@ -39,13 +39,29 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     vsrAvailable().then(setVsrOk);
   }, []);
 
-  // Live preview as soon as the screen mounts (full-screen, not mirrored).
+  // Camera follows the toggle: live preview while on, released when off.
   useEffect(() => {
-    attachPreview(videoRef.current);
-    startCamera().catch(() => setApiError("Camera access is required."));
-    return () => stopAudio();
+    if (cameraOn) {
+      attachPreview(videoRef.current);
+      startCamera().catch(() => {
+        setApiError("Camera access is required.");
+        setCameraOn(false);
+      });
+    } else {
+      stopCamera();
+      stopAudio();
+      // Clear the utterance but keep apiError — it may explain why the
+      // camera just turned itself off (e.g. permission denied).
+      setText("");
+      setTokens([]);
+      setSpoken(0);
+      setSteps([]);
+      setPhase("idle");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attachPreview, startCamera]);
+  }, [cameraOn]);
+
+  useEffect(() => () => stopAudio(), []); // release audio on unmount
 
   // Elapsed-time counter shown in the "Listening" status pill.
   useEffect(() => {
@@ -177,51 +193,82 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   const showText = phase === "review" || phase === "speaking";
   const mmss = `${Math.floor(recSeconds / 60)}:${String(recSeconds % 60).padStart(2, "0")}`;
 
+  const btnSize = cameraOn ? "sm" : "md";
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-black">
-      {/* Full-screen camera. `-scale-x-100` un-mirrors the front-camera preview
-          so it shows the true (non-flipped) orientation. Display only — the
-          recorded clip sent to the model is unaffected. */}
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        className="absolute inset-0 h-full w-full -scale-x-100 object-cover"
-      />
+      {/* Full-screen camera (only while the toggle is on). `-scale-x-100`
+          un-mirrors the front-camera preview so it shows the true orientation.
+          Display only — the recorded clip sent to the model is unaffected. */}
+      {cameraOn && (
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="absolute inset-0 h-full w-full -scale-x-100 object-cover"
+        />
+      )}
+
+      {/* Camera off: minimal landing — logo + title, centered. */}
+      {!cameraOn && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+          <img
+            src="/chaplin_logo.png"
+            alt=""
+            className="h-24 w-24 brightness-0 invert opacity-90"
+          />
+          <h1 className="text-4xl font-bold tracking-tight text-white">Chaplin AI</h1>
+          <p className="text-sm text-white/45">Lip-reading communication agent</p>
+        </div>
+      )}
 
       {/* Dim the camera while a sentence is on screen so the words pop. */}
       {showText && <div className="absolute inset-0 z-10 bg-black/45" />}
 
-      {/* Account avatar, top-left (bare — no chip). */}
-      <div className="absolute left-4 z-30" style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}>
-        <UserMenu onChangeVoice={onChangeVoice} />
-      </div>
-
-      {/* Run Agent + About, top-right. */}
+      {/* Control section, top-right: Run Agent (main), Settings, Info, Camera. */}
       <div
-        className="absolute right-4 z-30 flex items-center gap-2"
+        className={`absolute right-4 z-30 flex flex-col rounded-3xl border border-white/15 bg-black/45 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-[0_8px_28px_rgba(0,0,0,0.35)] ${
+          cameraOn ? "w-44 gap-1.5 p-2" : "w-60 gap-2.5 p-3"
+        }`}
         style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
       >
-        {/* Literally the Talk button (GlassButton ghost), sized for the top bar. */}
         <GlassButton
-          size="sm"
+          size={btnSize}
           onClick={() => setShowAgent(true)}
           variant="ghost"
           icon={<BoltIcon className="text-green-400" />}
           label="Run Agent"
-          className="bg-black/55"
+          className="w-full bg-black/55"
         />
         <GlassButton
-          size="sm"
-          round
-          ariaLabel="About"
+          size={btnSize}
+          onClick={onChangeVoice}
+          variant="ghost"
+          icon={<GearIcon />}
+          label="Settings"
+          className="w-full bg-black/55"
+        />
+        <GlassButton
+          size={btnSize}
           onClick={() => setShowAbout(true)}
           variant="ghost"
-          icon={<span className="font-bold">i</span>}
-          label=""
-          className="bg-black/55"
+          icon={<InfoIcon />}
+          label="Info"
+          className="w-full bg-black/55"
         />
+        {/* Camera on/off — same capsule look, with an Apple-style switch. */}
+        <div
+          className={`flex w-full items-center justify-between rounded-full border border-white/30 bg-black/55 font-semibold text-white ${
+            cameraOn ? "px-4 py-1 text-sm" : "px-5 py-1.5 text-base"
+          }`}
+        >
+          <span className={`flex items-center ${cameraOn ? "gap-1.5" : "gap-2"}`}>
+            <CameraIcon />
+            Camera
+          </span>
+          <Toggle checked={cameraOn} onChange={setCameraOn} small={cameraOn} />
+        </div>
       </div>
 
       {/* Recording status pill, top-center. */}
@@ -270,7 +317,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
             <p className="mb-3 text-center text-sm font-medium text-red-300">{error || apiError}</p>
           )}
 
-          {phase === "idle" && (
+          {cameraOn && phase === "idle" && (
             <GlassButton className="w-full" onClick={record} variant="ghost" icon={<RecordDot />} label="Talk" />
           )}
 
@@ -384,8 +431,56 @@ function GlassButton({
   );
 }
 
+// Apple-style switch: green track when on, white knob sliding across.
+function Toggle({
+  checked,
+  onChange,
+  small = false,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  small?: boolean;
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label="Camera"
+      onClick={() => onChange(!checked)}
+      className={`relative shrink-0 rounded-full transition-colors duration-200 ${
+        small ? "h-6 w-10" : "h-7 w-12"
+      } ${checked ? "bg-green-500" : "bg-white/25"}`}
+    >
+      <span
+        className={`absolute left-0.5 top-0.5 rounded-full bg-white shadow-md transition-transform duration-200 ${
+          small ? "h-5 w-5" : "h-6 w-6"
+        } ${checked ? (small ? "translate-x-4" : "translate-x-5") : ""}`}
+      />
+    </button>
+  );
+}
+
 /* — inline icons (no icon dependency) — */
 const RecordDot = () => <span className="h-3 w-3 rounded-full bg-red-500" />;
+const GearIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+const InfoIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+);
+const CameraIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 7l-7 5 7 5V7z" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+);
 const BoltIcon = ({ className = "" }: { className?: string }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />

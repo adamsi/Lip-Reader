@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { enrollVoice, getVoices, selectVoice, Voice } from "../lib/api";
 import { setStoredVoiceId } from "../lib/voice";
 import { useRecorder } from "../lib/useRecorder";
-import UserMenu from "./UserMenu";
 import Spinner from "./Spinner";
 
 type Tab = "preset" | "record";
@@ -73,7 +72,6 @@ export default function Onboarding({
               Cancel
             </button>
           )}
-          <UserMenu />
         </div>
       </header>
 
