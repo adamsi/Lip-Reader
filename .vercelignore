@@ -1,4 +1,6 @@
 # Heavy / local-only files that must not ship to the serverless function.
+.env
+app/.env
 .venv
 .claude
 .pytest_cache

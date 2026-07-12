@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { executeLips, speak, SpokenToken, Step } from "../lib/api";
+import { executeLips, speak, SpokenToken, Step, vsrAvailable } from "../lib/api";
 import { getStoredVoiceId } from "../lib/voice";
 import { useRecorder } from "../lib/useRecorder";
 import AboutModal from "./AboutModal";
@@ -32,6 +32,12 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const rafRef = useRef<number | null>(null);
+
+  // Serverless deployments can't run the VSR model; gate Talk up-front.
+  const [vsrOk, setVsrOk] = useState(true);
+  useEffect(() => {
+    vsrAvailable().then(setVsrOk);
+  }, []);
 
   // Live preview as soon as the screen mounts (full-screen, not mirrored).
   useEffect(() => {
@@ -73,6 +79,12 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
 
   // Talk — always starts a fresh utterance (and clears the previous sentence).
   async function record() {
+    if (!vsrOk) {
+      setApiError(
+        "Lip-reading isn't available on this deployment - use the Run Agent button instead."
+      );
+      return;
+    }
     stopAudio();
     clearUtterance();
     await start();
@@ -89,10 +101,12 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
       setSteps(result.steps);
       setPhase("review"); // show the sentence; the human confirms before voicing
     } catch (e) {
-      // The backend returns a human-readable error (no face / no speech).
-      const msg = e instanceof Error && /try again/i.test(e.message)
-        ? e.message
-        : "Something went wrong. Tap Talk to try again.";
+      // The backend's error envelope is human-readable (no face / no speech /
+      // VSR unavailable) — show it as-is; hide only raw fetch failures.
+      const msg =
+        e instanceof Error && e.message && !e.message.startsWith("/api/")
+          ? e.message
+          : "Something went wrong. Tap Talk to try again.";
       setApiError(msg);
       setPhase("idle");
     }

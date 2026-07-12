@@ -50,8 +50,23 @@ export async function executeLips(clip: Blob): Promise<ExecuteResult> {
     method: "POST",
     body: form,
   });
+  // Serverless edges reject large uploads before they reach the backend.
+  if (res.status === 413) {
+    throw new Error("Recording too large to upload on this deployment - use Run Agent instead.");
+  }
   if (!res.ok) throw new Error(`/api/execute_lips failed: ${res.status}`);
   return unwrap(await res.json());
+}
+
+/** Whether this deployment can run the lip-reading model (false on serverless). */
+export async function vsrAvailable(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/health`);
+    if (!res.ok) return true;
+    return (await res.json()).vsr_available !== false;
+  } catch {
+    return true; // don't block Talk on a health hiccup
+  }
 }
 
 export const architectureUrl = `${API_BASE}/api/model_architecture`;

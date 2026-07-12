@@ -181,7 +181,9 @@ class SpeakBody(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    # vsr_available lets the SPA disable the Talk flow on serverless deploys
+    # instead of uploading a clip that can only fail.
+    return {"status": "ok", "vsr_available": not config.DISABLE_VSR}
 
 
 @app.get("/voices")
