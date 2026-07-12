@@ -221,38 +221,48 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           <div className="pointer-events-none absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-sky-300/50 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 left-1/3 h-96 w-96 rounded-full bg-amber-200/60 blur-3xl" />
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 overflow-y-auto px-6 py-16 text-center">
-            <img src="/chaplin_logo.png" alt="" className="h-24 w-24 drop-shadow-sm" />
-            <h1 className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-rose-500 bg-clip-text text-5xl font-extrabold tracking-tight text-transparent">
+          {/* The copy streams onto the screen line by line (staggered fade-up). */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-y-auto px-6 py-16 text-center">
+            <img
+              src="/chaplin_logo.png"
+              alt=""
+              className="animate-fade-up h-24 w-24 drop-shadow-sm"
+              style={{ animationDelay: "0.05s" }}
+            />
+            <h1
+              className="animate-fade-up bg-gradient-to-r from-violet-600 via-fuchsia-500 to-rose-500 bg-clip-text text-5xl font-extrabold tracking-tight text-transparent"
+              style={{ animationDelay: "0.25s" }}
+            >
               Chaplin AI
             </h1>
-            <p className="max-w-lg text-base leading-relaxed text-gray-600">
-              A communication agent for non-vocal, ventilated patients. Chaplin AI
-              reads your lips from a short webcam clip, corrects the noisy
-              transcription with a reflection agent, and speaks the sentence aloud
+
+            <p
+              className="animate-fade-up mt-3 max-w-xl text-2xl font-semibold leading-snug text-gray-800 sm:text-3xl"
+              style={{ animationDelay: "0.55s" }}
+            >
+              A communication agent for non-vocal, ventilated patients.
+            </p>
+            <p
+              className="animate-fade-up max-w-lg text-lg text-gray-700 sm:text-xl"
+              style={{ animationDelay: "0.95s" }}
+            >
+              Chaplin AI <span className="font-semibold text-amber-600">reads your lips</span>{" "}
+              from a short webcam clip,
+            </p>
+            <p
+              className="animate-fade-up max-w-lg text-base text-gray-600 sm:text-lg"
+              style={{ animationDelay: "1.35s" }}
+            >
+              <span className="font-semibold text-violet-600">corrects</span> the noisy
+              transcription with a reflection agent,
+            </p>
+            <p
+              className="animate-fade-up max-w-lg text-sm text-gray-500 sm:text-base"
+              style={{ animationDelay: "1.75s" }}
+            >
+              and <span className="font-semibold text-sky-600">speaks the sentence aloud</span>{" "}
               in a natural voice.
             </p>
-
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-              <FeatureCard
-                tone="amber"
-                icon={<CameraIcon />}
-                title="Reads lips"
-                text="The Auto-AVSR model transcribes silent speech straight from the camera."
-              />
-              <FeatureCard
-                tone="violet"
-                icon={<BoltIcon className="" />}
-                title="Corrects with AI"
-                text="A LangGraph reflection agent (generate + reflect) fixes the noisy transcript."
-              />
-              <FeatureCard
-                tone="sky"
-                icon={<SpeakerIcon size={15} />}
-                title="Speaks aloud"
-                text="The corrected sentence is voiced word-by-word in a natural voice."
-              />
-            </div>
           </div>
         </>
       )}
@@ -477,35 +487,6 @@ function GlassButton({
         {label}
       </span>
     </button>
-  );
-}
-
-// Small colorful feature card for the landing page.
-const CARD_TONE: Record<string, string> = {
-  amber: "bg-amber-100 text-amber-600",
-  violet: "bg-violet-100 text-violet-600",
-  sky: "bg-sky-100 text-sky-600",
-};
-
-function FeatureCard({
-  tone,
-  icon,
-  title,
-  text,
-}: {
-  tone: string;
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="w-64 rounded-2xl border border-white/70 bg-white/70 p-4 text-left shadow-[0_4px_18px_rgba(76,29,149,0.1)] backdrop-blur">
-      <div className={`flex h-9 w-9 items-center justify-center rounded-full ${CARD_TONE[tone]}`}>
-        {icon}
-      </div>
-      <div className="mt-2.5 text-sm font-bold text-gray-900">{title}</div>
-      <p className="mt-1 text-xs leading-relaxed text-gray-600">{text}</p>
-    </div>
   );
 }
 
