@@ -49,11 +49,9 @@ uv run uvicorn backend.app.main:app --reload --port 8000
 
 - Serves on `http://localhost:8000`. The heavy VSR model loads lazily on the first
   `/transcribe` call.
-- Auth: for the local MVP `AUTH_STUB=true` (default) decodes the Clerk JWT without
-  signature verification. Set `AUTH_STUB=false` + `CLERK_JWKS_URL`/`CLERK_ISSUER` to
-  enforce real verification.
-- Persistence: SQLite at `backend/chaplin.db` by default. Set `DATABASE_URL` to a
-  Postgres DSN to swap. Voice samples are stored under `backend/storage/voices/`.
+- No auth: the API is open on localhost.
+- Persistence: none — the selected voice lives in the browser's localStorage.
+  Voice samples are stored under `backend/storage/voices/`.
 
 ## 2. Run the SPA (web)
 

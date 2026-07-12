@@ -6,8 +6,8 @@ Exercises the real request path against the FastAPI app in-process
     clip  ->  POST /transcribe  ->  POST /speak
 
 It captures a short webcam clip when a camera is available; otherwise it
-falls back to a synthetic clip so the full plumbing (auth, temp-file
-handling, the privacy delete-in-finally, error handling) is still verified.
+falls back to a synthetic clip so the full plumbing (temp-file handling,
+the privacy delete-in-finally, error handling) is still verified.
 
 Run:  uv run python backend/e2e_check.py
 """
@@ -17,8 +17,6 @@ import os
 import sys
 import tempfile
 import time
-
-import jwt
 
 # Bootstrap repo-root import path + env.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -84,8 +82,6 @@ def main() -> int:
     ok["env"] = bool(config.ANTHROPIC_API_KEY and config.INWORLD_API_KEY and weights_ok)
 
     client = TestClient(app)
-    token = jwt.encode({"sub": "e2e_user"}, "e2e-secret-key-padding-padding-xx", algorithm="HS256")
-    headers = {"Authorization": f"Bearer {token}"}
 
     step("2/4  Capture clip")
     clip_path, kind = make_clip()
@@ -93,7 +89,7 @@ def main() -> int:
     step("3/4  POST /transcribe")
     try:
         with open(clip_path, "rb") as f:
-            r = client.post("/transcribe", headers=headers, files={"file": ("clip.mp4", f, "video/mp4")})
+            r = client.post("/transcribe", files={"file": ("clip.mp4", f, "video/mp4")})
         if r.status_code == 200:
             text = r.json()["text"]
             ok["transcribe"] = True
@@ -111,7 +107,7 @@ def main() -> int:
     speak_text = text if ok["transcribe"] and "didn't catch" not in text.lower() else "Hello from Chaplin."
 
     step("4/4  POST /speak")
-    r = client.post("/speak", headers=headers, json={"text": speak_text})
+    r = client.post("/speak", json={"text": speak_text})
     if r.status_code == 200 and r.json().get("audio"):
         body = r.json()
         ok["speak"] = True

@@ -18,7 +18,6 @@ learned_mappings.json
 .env
 
 # Backend runtime artifacts
-backend/chaplin.db
 backend/storage/
 
 # Python

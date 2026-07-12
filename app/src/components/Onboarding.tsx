@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { enrollVoice, getVoices, selectVoice, Voice } from "../lib/api";
+import { setStoredVoiceId } from "../lib/voice";
 import { useRecorder } from "../lib/useRecorder";
 import UserMenu from "./UserMenu";
 import Spinner from "./Spinner";
@@ -16,7 +16,6 @@ export default function Onboarding({
   canCancel?: boolean;
   onCancel?: () => void;
 }) {
-  const { getToken } = useAuth();
   const [tab, setTab] = useState<Tab>("preset");
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loadingVoices, setLoadingVoices] = useState(true);
@@ -26,11 +25,11 @@ export default function Onboarding({
 
   useEffect(() => {
     setLoadingVoices(true);
-    getVoices(getToken)
+    getVoices()
       .then(setVoices)
       .catch(() => setError("Couldn't load voices."))
       .finally(() => setLoadingVoices(false));
-  }, [getToken]);
+  }, []);
 
   const q = query.trim().toLowerCase();
   const filtered = q
@@ -46,7 +45,8 @@ export default function Onboarding({
     setBusy(true);
     setError(null);
     try {
-      await selectVoice(getToken, voiceId);
+      await selectVoice(voiceId);
+      setStoredVoiceId(voiceId);
       onDone();
     } catch {
       setError("Couldn't save that voice. Try again.");
@@ -159,7 +159,6 @@ function VoiceRecorder({
   onEnrolled: () => void;
   onError: (m: string) => void;
 }) {
-  const { getToken } = useAuth();
   const { state, error, start, stop, attachPreview } = useRecorder();
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -173,7 +172,8 @@ function VoiceRecorder({
     const clip = await stop();
     if (!clip) return setBusy(false);
     try {
-      await enrollVoice(getToken, clip);
+      const voiceId = await enrollVoice(clip);
+      setStoredVoiceId(voiceId);
       onEnrolled();
     } catch {
       onError("Couldn't create your voice. Please try again.");

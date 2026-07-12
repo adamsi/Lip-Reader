@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { speak, SpokenToken, transcribe } from "../lib/api";
+import { getStoredVoiceId } from "../lib/voice";
 import { useRecorder } from "../lib/useRecorder";
 import UserMenu from "./UserMenu";
 import Spinner from "./Spinner";
@@ -13,7 +13,6 @@ import Spinner from "./Spinner";
 type Phase = "idle" | "recording" | "thinking" | "review" | "speaking";
 
 export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => void }) {
-  const { getToken } = useAuth();
   const { error, start, stop, attachPreview, startCamera } = useRecorder();
   const [phase, setPhase] = useState<Phase>("idle");
   const [text, setText] = useState("");
@@ -77,7 +76,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     const clip = await stop();
     if (!clip) return setPhase("idle");
     try {
-      const result = await transcribe(getToken, clip);
+      const result = await transcribe(clip);
       if (/^i didn'?t catch/i.test(result)) {
         setApiError("Didn't catch that — try again.");
         return setPhase("idle");
@@ -115,7 +114,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     setPreparing(true);
     setApiError(null);
     try {
-      const { audioUrl, tokens: tk } = await speak(getToken, text);
+      const { audioUrl, tokens: tk } = await speak(text, getStoredVoiceId());
       setTokens(tk);
       const audio = new Audio(audioUrl);
       audioRef.current = audio;

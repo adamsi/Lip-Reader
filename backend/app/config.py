@@ -30,8 +30,7 @@ INWORLD_API_KEY = os.getenv("INWORLD_API_KEY")
 DEFAULT_VOICE_ID = os.getenv("INWORLD_VOICE_ID", "Ashley")
 
 # --- Persistence --------------------------------------------------------
-# SQLite for the local MVP; set DATABASE_URL to a Postgres DSN to swap.
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{REPO_ROOT / 'backend' / 'chaplin.db'}")
+# No DB: the selected voice lives in the browser's localStorage.
 # Object-storage-style local dir for voice samples (S3-swappable later).
 VOICE_STORAGE_DIR = Path(os.getenv("VOICE_STORAGE_DIR", str(REPO_ROOT / "backend" / "storage" / "voices")))
 VOICE_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
