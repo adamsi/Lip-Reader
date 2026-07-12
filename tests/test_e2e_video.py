@@ -17,10 +17,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+_REPO_ROOT = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, _REPO_ROOT)
+sys.path.insert(0, os.path.join(_REPO_ROOT, "backend"))  # vendored pipelines/espnet
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs", "LRS3_V_WER19.1.ini")
-SRAVI_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "SRAVI test videos")
+CONFIG_PATH = os.path.join(_REPO_ROOT, "assets", "configs", "LRS3_V_WER19.1.ini")
+SRAVI_DIR = os.path.join(_REPO_ROOT, "assets", "sravi_test_videos")
 
 HAS_CONFIG = os.path.isfile(CONFIG_PATH)
 HAS_SRAVI = os.path.isdir(SRAVI_DIR)
@@ -123,7 +125,7 @@ skip_reason = (
 @pytest.mark.parametrize("video_path,expected", ALL_CASES)
 def test_video(video_path, expected, pipeline, llm_client, results_collector):
     """Test a single video through the full pipeline."""
-    from chaplin import LLM_SYSTEM_PROMPT
+    from backend.app.agent.prompts import GENERATE_SYSTEM_PROMPT as LLM_SYSTEM_PROMPT
 
     if not os.path.isfile(video_path):
         pytest.skip(f"Video not found: {video_path}")
@@ -143,7 +145,7 @@ def test_video(video_path, expected, pipeline, llm_client, results_collector):
     change_rate = llm_change_rate(raw_top1, corrected)
     improvement = corrected_overlap - raw_overlap
 
-    label = video_path.split("SRAVI test videos/")[-1] if "SRAVI test videos/" in video_path else video_path
+    label = video_path.split("sravi_test_videos/")[-1] if "sravi_test_videos/" in video_path else video_path
     print(
         f"\n[{label}]"
         f"\n  Expected:      {expected}"

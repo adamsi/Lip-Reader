@@ -1,14 +1,13 @@
 # Model weights & large binaries
 weights/
 benchmarks/
-test videos/*.mov
-old deprecated test videos/
-SRAVI test videos/**/*.mov
+assets/test_videos/*.mov
+assets/sravi_test_videos/**/*.mov
 
 # Debug artifacts
 debug_crop*.jpg
 lipreader.log
-learned_mappings.json
+*.tsbuildinfo
 
 # IDE
 .cursor/
@@ -24,10 +23,7 @@ backend/storage/
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
 
 # uv
 uv.lock
-
-# Unused VALLR code
-models/
-vallr_pipeline.py
