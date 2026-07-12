@@ -48,19 +48,22 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
               How to enter input
             </div>
-            <ul className="mt-1 list-disc space-y-1 pl-5">
+            <ul className="mt-1.5 space-y-2">
               <li>
-                <strong className="text-gray-900">Talk</strong> - turn the camera on and
-                record a short clip of yourself speaking silently; the sentence appears on
-                screen and can be spoken aloud with{" "}
-                <strong className="text-gray-900">Speak</strong>.
+                <Chip c="rose">Talk</Chip> - turn the camera on and record a short clip of
+                yourself speaking silently; the sentence appears on screen and can be spoken
+                aloud with Speak.
               </li>
               <li>
-                <strong className="text-gray-900">Run Agent</strong> - type (or pick a
-                preset) noisy transcription as text; the agent corrects it and shows every
-                step it took.
+                <Chip c="violet">Run Agent</Chip> - type (or pick a preset) noisy
+                transcription as text; the agent corrects it and shows every step it took.
               </li>
             </ul>
+            <p className="mt-2.5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700">
+              <WarnIcon className="mt-0.5 shrink-0" />
+              Talk (camera recording) is available only while running locally - not on the
+              Vercel deployment.
+            </p>
           </div>
 
           <div className="border-t border-gray-200 pt-4 text-center">
@@ -77,6 +80,7 @@ const CHIP: Record<string, string> = {
   amber: "bg-amber-100 text-amber-700 border-amber-300",
   violet: "bg-violet-100 text-violet-700 border-violet-300",
   sky: "bg-sky-100 text-sky-700 border-sky-300",
+  rose: "bg-rose-100 text-rose-700 border-rose-300",
 };
 
 function Chip({ c, children }: { c: string; children: React.ReactNode }) {
@@ -86,3 +90,11 @@ function Chip({ c, children }: { c: string; children: React.ReactNode }) {
     </span>
   );
 }
+
+const WarnIcon = ({ className = "" }: { className?: string }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
