@@ -10,19 +10,25 @@ asserting a wrong sentence.
 
 ## Architecture (high level)
 ```
-webcam ─▶ short mp4 clip ─▶ VSR model (top-1 text + per-word confidence)
+webcam ─▶ short mp4 clip ─▶ vsr (Auto-AVSR lip-reading)
                                         │
                                         ▼
-                          agent / LLM correction (Claude)
+              LangGraph reflection agent: generate ─▶ reflect ─▶ (revise once | return)
                                         │
                                         ▼
-                     on-screen text  +  optional TTS voice clone
+                on-screen text + steps trace  +  optional TTS voice clone
 ```
 - API backend: `backend/` (FastAPI). Entry point `backend/app/main.py`.
-- React + Capacitor SPA: `app/`. The browser owns the camera (getUserMedia/MediaRecorder).
-- Shared LLM correction prompt: `chaplin.py` (`LLM_SYSTEM_PROMPT`, reused by backend + tests).
-- VSR model: `pipelines/`
-- Vendored model internals: `espnet/` — treat as upstream, avoid editing
+  Workshop endpoints: `/api/team_info`, `/api/agent_info`, `/api/model_architecture`,
+  `POST /api/execute` (text), `POST /api/execute_lips` (clip). The built SPA is
+  served at the root URL.
+- LangGraph agent: `backend/app/agent/` — `graph.py` (generate → reflect, max 1
+  revision), `prompts.py` (all node prompts), `model.py` (ChatAnthropic + structured output).
+- React SPA: `app/`. The browser owns the camera (getUserMedia/MediaRecorder).
+  "Run Agent" panel = text entry to the agent; About modal explains the system.
+- VSR model: `backend/pipelines/`
+- Vendored model internals: `backend/espnet/` — treat as upstream, avoid editing
+- Assets (brand, VSR config, test-video ground truths, architecture.png): `assets/`
 - Eval / checks: `tests/`, `backend/e2e_check.py`
 
 ## How to work here
@@ -35,7 +41,7 @@ webcam ─▶ short mp4 clip ─▶ VSR model (top-1 text + per-word confidence)
   official docs rather than relying on memory. Ground the agent in the VSR per-word confidence.
 - **After each big refactor, verify all system flows work end to end** before finishing:
   ```powershell
-  uv run python backend/e2e_check.py          # clip → /transcribe → /speak, PASS/FAIL per stage
+  uv run python backend/e2e_check.py          # all /api/* + clip → /api/execute_lips → /speak, PASS/FAIL per stage
   uv run --extra test pytest tests/ -v -s     # eval suite (word-overlap F1)
   ```
   Report real results; if a flow can't be run here (no camera/API key/weights), say so.

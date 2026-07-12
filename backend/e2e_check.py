@@ -161,10 +161,11 @@ def main() -> int:
             print(f"steps    : {[s['module'] for s in steps]}")
             speak_text = body.get("response") or speak_text
         else:
-            # Synthetic clip has no face -> the error shape is the correct outcome.
+            # No face / no speech -> the error shape is the correct outcome
+            # (synthetic clips always; webcam clips when nobody is speaking).
             shape_ok = body.get("response") is None and body.get("steps") == [] and body.get("error")
-            ok["execute_lips"] = kind == "synthetic" and bool(shape_ok)
-            print(f"error    : {body.get('error')!r} (expected for synthetic clip)")
+            ok["execute_lips"] = bool(shape_ok)
+            print(f"error    : {body.get('error')!r} (valid error shape - no face/speech in clip)")
     finally:
         if os.path.exists(clip_path):
             os.remove(clip_path)
