@@ -182,25 +182,23 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         className="absolute right-4 z-30 flex items-center gap-2"
         style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
       >
-        {/* Same "Liquid Glass" recipe as GlassButton, sized for the top bar. */}
-        <button
+        {/* Literally the Talk button (GlassButton ghost), sized for the top bar. */}
+        <GlassButton
+          size="sm"
           onClick={() => setShowAgent(true)}
-          className="relative flex items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border border-white/30 bg-white/12 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,0,0,0.25),0_8px_28px_rgba(0,0,0,0.35)]"
-        >
-          <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent" />
-          <span className="relative flex items-center gap-1.5 drop-shadow-sm">
-            <BoltIcon />
-            Run Agent
-          </span>
-        </button>
-        <button
+          variant="ghost"
+          icon={<BoltIcon className="text-green-400" />}
+          label="Run Agent"
+        />
+        <GlassButton
+          size="sm"
+          round
+          ariaLabel="About"
           onClick={() => setShowAbout(true)}
-          aria-label="About"
-          className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/30 bg-white/12 text-sm font-bold text-white backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,0,0,0.25),0_8px_28px_rgba(0,0,0,0.35)]"
-        >
-          <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent" />
-          <span className="relative drop-shadow-sm">i</span>
-        </button>
+          variant="ghost"
+          icon={<span className="font-bold">i</span>}
+          label=""
+        />
       </div>
 
       {/* Recording status pill, top-center. */}
@@ -326,6 +324,9 @@ function GlassButton({
   variant,
   icon,
   label,
+  size = "md",
+  round = false,
+  ariaLabel,
   className = "",
 }: {
   onClick: () => void;
@@ -333,17 +334,26 @@ function GlassButton({
   variant: "danger" | "ghost";
   icon: React.ReactNode;
   label: string;
+  size?: "sm" | "md";
+  round?: boolean;
+  ariaLabel?: string;
   className?: string;
 }) {
   const tint = { danger: "bg-red-500/35", ghost: "bg-white/12" }[variant];
+  const sizing = round
+    ? "h-8 w-8 text-sm"
+    : size === "sm"
+      ? "px-4 py-1.5 text-sm"
+      : "px-8 py-2.5 text-base";
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full border border-white/30 px-8 py-2.5 text-base font-semibold text-white backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] disabled:opacity-50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,0,0,0.25),0_8px_28px_rgba(0,0,0,0.35)] ${tint} ${className}`}
+      aria-label={ariaLabel}
+      className={`relative flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full border border-white/30 font-semibold text-white backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] disabled:opacity-50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,0,0,0.25),0_8px_28px_rgba(0,0,0,0.35)] ${sizing} ${tint} ${className}`}
     >
       <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent" />
-      <span className="relative flex items-center gap-2 drop-shadow-sm">
+      <span className={`relative flex items-center drop-shadow-sm ${size === "sm" ? "gap-1.5" : "gap-2"}`}>
         {icon}
         {label}
       </span>
@@ -353,8 +363,8 @@ function GlassButton({
 
 /* — inline icons (no icon dependency) — */
 const RecordDot = () => <span className="h-3 w-3 rounded-full bg-red-500" />;
-const BoltIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+const BoltIcon = ({ className = "" }: { className?: string }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
   </svg>
 );
