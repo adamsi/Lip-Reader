@@ -182,19 +182,24 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         className="absolute right-4 z-30 flex items-center gap-2"
         style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
       >
+        {/* Same "Liquid Glass" recipe as GlassButton, sized for the top bar. */}
         <button
           onClick={() => setShowAgent(true)}
-          className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-sm font-semibold text-white backdrop-blur-xl transition hover:bg-white/20 active:scale-95"
+          className="relative flex items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border border-white/30 bg-white/12 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,0,0,0.25),0_8px_28px_rgba(0,0,0,0.35)]"
         >
-          <BoltIcon />
-          Run Agent
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent" />
+          <span className="relative flex items-center gap-1.5 drop-shadow-sm">
+            <BoltIcon />
+            Run Agent
+          </span>
         </button>
         <button
           onClick={() => setShowAbout(true)}
           aria-label="About"
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-white/10 text-sm font-bold text-white backdrop-blur-xl transition hover:bg-white/20 active:scale-95"
+          className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/30 bg-white/12 text-sm font-bold text-white backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,0,0,0.25),0_8px_28px_rgba(0,0,0,0.35)]"
         >
-          i
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent" />
+          <span className="relative drop-shadow-sm">i</span>
         </button>
       </div>
 

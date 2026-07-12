@@ -7,7 +7,8 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
       <div className="animate-pop flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-zinc-900/95 sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div className="flex items-center gap-3">
-            <img src="/chaplin_logo.png" alt="Chaplin AI" className="h-9 w-9 rounded-xl" />
+            {/* brightness-0 + invert renders the black silhouette logo in white. */}
+            <img src="/chaplin_logo.png" alt="Chaplin AI" className="h-9 w-9 brightness-0 invert" />
             <h2 className="text-lg font-bold text-white">About Chaplin AI</h2>
           </div>
           <button
@@ -34,7 +35,7 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
               A webcam clip is transcribed by the <Chip c="amber">vsr</Chip> model
               (Auto-AVSR). A LangGraph <em>reflection</em> agent then corrects the noisy
               transcription: <Chip c="violet">generate</Chip> proposes a corrected sentence
-              and <Chip c="sky">reflect</Chip> reviews it — requesting at most one revision —
+              and <Chip c="sky">reflect</Chip> reviews it, requesting at most one revision,
               before returning the final response with a full steps trace.
             </p>
             <img
@@ -50,22 +51,22 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
             </div>
             <ul className="mt-1 list-disc space-y-1 pl-5">
               <li>
-                <strong className="text-white">Talk</strong> — record a short clip of
+                <strong className="text-white">Talk</strong> - record a short clip of
                 yourself speaking silently to the camera; the sentence appears on screen and
                 can be spoken aloud with <strong className="text-white">Speak</strong>.
               </li>
               <li>
-                <strong className="text-white">Run Agent</strong> — type (or pick a preset)
+                <strong className="text-white">Run Agent</strong> - type (or pick a preset)
                 noisy transcription as text; the agent corrects it and shows every step it
                 took.
               </li>
             </ul>
           </div>
 
-          <p className="text-xs text-white/40">
-            Privacy: video is processed locally and deleted right after inference — only
-            text leaves the device.
-          </p>
+          <div className="border-t border-white/10 pt-4 text-center">
+            <p className="text-base font-semibold text-white">Adam Sion &amp; Jonathan Eshel</p>
+            <p className="mt-0.5 text-sm text-white/50">Chaplin AI</p>
+          </div>
         </div>
       </div>
     </div>

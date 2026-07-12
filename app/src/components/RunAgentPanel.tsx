@@ -42,7 +42,7 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
           <div>
             <h2 className="text-lg font-bold text-white">Run Agent</h2>
             <p className="text-xs text-white/50">
-              Send a noisy transcription as text — no camera needed.
+              Send a noisy transcription as text - no camera needed.
             </p>
           </div>
           <button
@@ -59,18 +59,27 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
           <label className="text-xs font-semibold uppercase tracking-wide text-white/40">
             Preset incorrect sentences
           </label>
-          <select
-            value={PRESETS.includes(prompt) ? prompt : ""}
-            onChange={(e) => e.target.value && setPrompt(e.target.value)}
-            className="mt-1.5 w-full appearance-none rounded-xl border border-white/15 bg-zinc-800 px-3.5 py-2.5 text-sm text-white outline-none focus:border-violet-400"
-          >
-            <option value="">Choose a preset…</option>
-            {PRESETS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
+          <div className="relative mt-1.5">
+            <select
+              value={PRESETS.includes(prompt) ? prompt : ""}
+              onChange={(e) => e.target.value && setPrompt(e.target.value)}
+              className="w-full appearance-none rounded-xl border border-white/15 bg-zinc-800 py-2.5 pl-3.5 pr-10 text-sm text-white outline-none focus:border-violet-400"
+            >
+              <option value="">Choose a preset…</option>
+              {PRESETS.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <svg
+              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-white/50"
+              width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
 
           {/* free text */}
           <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-white/40">
