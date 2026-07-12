@@ -189,6 +189,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           variant="ghost"
           icon={<BoltIcon className="text-green-400" />}
           label="Run Agent"
+          className="bg-black/55"
         />
         <GlassButton
           size="sm"
@@ -198,6 +199,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           variant="ghost"
           icon={<span className="font-bold">i</span>}
           label=""
+          className="bg-black/55"
         />
       </div>
 

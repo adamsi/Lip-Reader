@@ -48,12 +48,10 @@ export default function StepsTrace({ steps }: { steps: Step[] }) {
             </span>
             <span className="ml-auto text-white/30 transition group-open:rotate-90">›</span>
           </summary>
-          {/* System prompts are internal — show only the actual input. */}
-          {Object.entries(step.prompt)
-            .filter(([k]) => k !== "system")
-            .map(([k, v]) => (
-              <Field key={k} label={k === "input" ? "prompt" : `prompt - ${k}`} value={v} />
-            ))}
+          {/* Full trace per the workshop requirements: module, prompt, response. */}
+          {Object.entries(step.prompt).map(([k, v]) => (
+            <Field key={k} label={`prompt - ${k}`} value={v} />
+          ))}
           <Field label="response" value={step.response} />
         </details>
       ))}
