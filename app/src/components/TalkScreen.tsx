@@ -103,10 +103,17 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     } catch (e) {
       // The backend's error envelope is human-readable (no face / no speech /
       // VSR unavailable) — show it as-is; hide only raw fetch failures.
-      const msg =
+      let msg =
         e instanceof Error && e.message && !e.message.startsWith("/api/")
           ? e.message
           : "Something went wrong. Tap Talk to try again.";
+      // Cold-start race: the mount-time health check may not have resolved
+      // before the user tapped Talk. Re-check so serverless deploys always
+      // explain themselves instead of showing a generic failure.
+      if (!(await vsrAvailable())) {
+        setVsrOk(false);
+        msg = "Lip-reading isn't available on this deployment - use the Run Agent button instead.";
+      }
       setApiError(msg);
       setPhase("idle");
     }
