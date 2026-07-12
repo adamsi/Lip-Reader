@@ -204,7 +204,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   return (
     <div
       className={`fixed inset-0 overflow-hidden ${
-        cameraOn ? "bg-black" : "bg-gradient-to-br from-sky-100 via-violet-100 to-rose-100"
+        cameraOn ? "bg-black" : "bg-gradient-to-br from-indigo-50 via-white to-violet-100"
       }`}
     >
       {/* Full-screen camera (only while the toggle is on). `-scale-x-100`
@@ -223,9 +223,8 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
       {/* Camera off: colorful landing — soft color glows + hero + features. */}
       {!cameraOn && (
         <>
-          <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-violet-300/50 blur-3xl" />
-          <div className="pointer-events-none absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-sky-300/50 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 left-1/3 h-96 w-96 rounded-full bg-amber-200/60 blur-3xl" />
+          <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-violet-200/50 blur-3xl" />
+          <div className="pointer-events-none absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-sky-200/50 blur-3xl" />
 
           {/* The copy streams onto the screen line by line (staggered fade-up). */}
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-y-auto px-6 py-16 text-center">
@@ -236,7 +235,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
               style={{ animationDelay: "0.05s" }}
             />
             <h1
-              className="animate-fade-up bg-gradient-to-r from-violet-600 via-fuchsia-500 to-rose-500 bg-clip-text text-5xl font-extrabold tracking-tight text-transparent"
+              className="animate-fade-up bg-gradient-to-r from-violet-700 via-violet-600 to-indigo-600 bg-clip-text text-5xl font-extrabold tracking-tight text-transparent"
               style={{ animationDelay: "0.25s" }}
             >
               Chaplin AI
@@ -252,23 +251,27 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
               className="animate-fade-up max-w-lg text-lg text-gray-700 sm:text-xl"
               style={{ animationDelay: "0.95s" }}
             >
-              Chaplin AI <span className="font-semibold text-amber-600">reads your lips</span>{" "}
+              Chaplin AI <span className="font-semibold text-violet-600">reads your lips</span>{" "}
               from a short webcam clip,
             </p>
-            <p
-              className="animate-fade-up max-w-lg text-base text-gray-600 sm:text-lg"
-              style={{ animationDelay: "1.35s" }}
-            >
-              <span className="font-semibold text-violet-600">corrects</span> the noisy
-              transcription with a reflection agent,
-            </p>
-            <p
-              className="animate-fade-up max-w-lg text-sm text-gray-500 sm:text-base"
-              style={{ animationDelay: "1.75s" }}
-            >
-              and <span className="font-semibold text-sky-600">speaks the sentence aloud</span>{" "}
-              in a natural voice.
-            </p>
+            {/* The last two sentences stream in word by word. */}
+            <StreamWords
+              className="max-w-lg text-base text-gray-600 sm:text-lg"
+              base={1.45}
+              segments={[
+                { text: "corrects", className: "font-semibold text-violet-600" },
+                { text: "the noisy transcription with a reflection agent," },
+              ]}
+            />
+            <StreamWords
+              className="max-w-lg text-base text-gray-600 sm:text-lg"
+              base={2.5}
+              segments={[
+                { text: "and" },
+                { text: "speaks the sentence aloud", className: "font-semibold text-violet-600" },
+                { text: "in a natural voice." },
+              ]}
+            />
           </div>
         </>
       )}
@@ -299,7 +302,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           size={btnSize}
           onClick={() => setShowAgent(true)}
           variant="primary"
-          icon={<BoltIcon className="text-lime-300" />}
+          icon={<BoltIcon className="text-emerald-300" />}
           label="Run Agent"
           className="w-full"
         />
@@ -307,7 +310,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           size={btnSize}
           onClick={onChangeVoice}
           variant="ghost"
-          icon={<span className="text-violet-600"><GearIcon /></span>}
+          icon={<span className="text-gray-500"><GearIcon /></span>}
           label="Settings"
           className="w-full"
         />
@@ -315,7 +318,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           size={btnSize}
           onClick={() => setShowAbout(true)}
           variant="ghost"
-          icon={<span className="text-sky-600"><InfoIcon /></span>}
+          icon={<span className="text-gray-500"><InfoIcon /></span>}
           label="Info"
           className="w-full"
         />
@@ -325,7 +328,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
             cameraOn ? "px-4 py-1 text-sm" : "px-5 py-1.5 text-base"
           }`}
         >
-          <span className={`flex items-center text-rose-500 ${cameraOn ? "gap-1.5" : "gap-2"}`}>
+          <span className={`flex items-center text-gray-500 ${cameraOn ? "gap-1.5" : "gap-2"}`}>
             <CameraIcon />
             <span className="text-gray-900">Camera</span>
           </span>
@@ -478,9 +481,9 @@ function GlassButton({
   className?: string;
 }) {
   const look = {
-    // Main action: vivid violet -> fuchsia gradient.
+    // Main action: violet -> indigo gradient (single hue family).
     primary:
-      "border-white/40 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_8px_24px_rgba(147,51,234,0.4)]",
+      "border-white/40 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_8px_24px_rgba(109,40,217,0.35)]",
     // Clean frosted-white capsule with dark text.
     ghost:
       "border-white/70 bg-white/85 text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_4px_14px_rgba(76,29,149,0.12)]",
@@ -505,6 +508,37 @@ function GlassButton({
         {label}
       </span>
     </button>
+  );
+}
+
+// One landing sentence that streams onto the screen word by word.
+function StreamWords({
+  segments,
+  base,
+  step = 0.12,
+  className = "",
+}: {
+  segments: { text: string; className?: string }[];
+  base: number;
+  step?: number;
+  className?: string;
+}) {
+  let i = 0;
+  return (
+    <p className={className}>
+      {segments.map((seg, si) =>
+        seg.text.split(" ").map((w, wi) => (
+          <span
+            key={`${si}-${wi}`}
+            className={`animate-fade-up inline-block ${seg.className || ""}`}
+            style={{ animationDelay: `${(base + i++ * step).toFixed(2)}s` }}
+          >
+            {w}
+            {" "}
+          </span>
+        ))
+      )}
+    </p>
   );
 }
 

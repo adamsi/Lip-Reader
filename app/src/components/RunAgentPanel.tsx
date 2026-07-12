@@ -96,7 +96,7 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
           <button
             onClick={run}
             disabled={!prompt.trim() || running}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-3 text-base font-bold text-white shadow-[0_8px_24px_rgba(147,51,234,0.35)] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-3 text-base font-bold text-white shadow-[0_8px_24px_rgba(109,40,217,0.3)] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
           >
             {running ? <Spinner size={20} light /> : <BoltIcon />}
             {running ? "Running…" : "Run Agent"}
