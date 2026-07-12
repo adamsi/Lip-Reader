@@ -1,14 +1,14 @@
 """Chaplin AI backend — stateless FastAPI service.
 
-No auth and no DB: the app is open on localhost and the selected voice
-persists in the browser's localStorage, arriving with each /speak request.
+Workshop API (exact shapes required by the course PDF):
+  GET  /api/team_info           -> student details
+  GET  /api/agent_info          -> agent meta, prompt template + examples
+  GET  /api/model_architecture  -> architecture diagram (PNG)
+  POST /api/execute             { prompt } -> { status, error, response, steps }
+  POST /api/execute_lips        mp4/webm clip -> same shape (VSR -> agent)
 
-Endpoints:
-  POST /transcribe    mp4 clip           -> { "text": <corrected transcription> }
-  POST /speak         { text, voice_id }  -> audio bytes + word timestamps
-  GET  /voices                            -> fixed preset voice list
-  POST /voice/enroll  mp4 sample          -> { voice_id } (clones a voice)
-  POST /voice/select  { voice_id }        -> validates against the catalog
+Supporting endpoints (unchanged): /health, /voices, /voice/*, /speak.
+The built SPA (app/dist) is served at the root URL.
 
 Privacy: uploaded clips are processed in a temp file and DELETED in a finally
 block immediately after inference. Video is never persisted; only text leaves.
@@ -25,35 +25,39 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import config, tts, vsr
+from . import config, meta, tts, vsr
+from .agent import run_agent
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("chaplin.api")
 
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     # Warm the VSR model in the background at startup (instead of lazily on
-    # the first /transcribe) so the first request doesn't pay the ~20s load.
+    # the first request) so the first clip doesn't pay the model-load time.
     # get_model() is a locked singleton, so a concurrent request just waits.
     threading.Thread(target=vsr.get_model, daemon=True).start()
     yield
 
 
-app = FastAPI(title="Chaplin AI", version="1.0.0", lifespan=_lifespan)
+app = FastAPI(title="Chaplin AI", version="2.0.0", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,
-    # Allow any localhost port (Vite may use 5174+ if 5173 is taken) + capacitor.
-    allow_origin_regex=r"^(https?://localhost(:\d+)?|capacitor://localhost)$",
+    # Allow any localhost port (Vite may use 5174+ if 5173 is taken).
+    allow_origin_regex=r"^https?://localhost(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Friendly message shown when we can't read a clip (no face / no speech).
-_DIDNT_CATCH = "I didn't catch that. Please try again."
+ARCHITECTURE_PNG = config.REPO_ROOT / "assets" / "architecture.png"
+SPA_DIST = config.REPO_ROOT / "app" / "dist"
 
 
 def _normalize_clip(src: str) -> str:
@@ -81,28 +85,54 @@ def _normalize_clip(src: str) -> str:
     return src
 
 
-class SpeakBody(BaseModel):
-    text: str
-    voice_id: str | None = None
+def _ok(response: str, steps: list[dict]) -> dict:
+    return {"status": "ok", "error": None, "response": response, "steps": steps}
 
 
-class TranscribeResponse(BaseModel):
-    text: str
+def _err(message: str) -> dict:
+    return {"status": "error", "error": message, "response": None, "steps": []}
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+# --- workshop API ---------------------------------------------------------
+
+@app.get("/api/team_info")
+def team_info():
+    return meta.TEAM_INFO
 
 
-@app.get("/voices")
-def voices():
-    return {"voices": tts.list_voices()}
+@app.get("/api/agent_info")
+def agent_info():
+    return meta.AGENT_INFO
 
 
-@app.post("/transcribe", response_model=TranscribeResponse)
-def transcribe(file: UploadFile = File(...)):
-    """mp4/webm clip -> corrected transcription. The clip is deleted in `finally`."""
+@app.get("/api/model_architecture")
+def model_architecture():
+    if not ARCHITECTURE_PNG.is_file():
+        raise HTTPException(status_code=404, detail="architecture.png not found")
+    return FileResponse(ARCHITECTURE_PNG, media_type="image/png")
+
+
+class ExecuteBody(BaseModel):
+    prompt: str = ""
+
+
+@app.post("/api/execute")
+def execute(body: ExecuteBody):
+    """Text prompt (a raw/noisy transcription) -> corrected sentence + steps."""
+    text = (body.prompt or "").strip()
+    if not text:
+        return _err("prompt is required")
+    try:
+        result = run_agent(text)
+    except Exception as e:  # noqa: BLE001
+        log.exception("agent failed")
+        return _err(f"agent failed: {e}")
+    return _ok(result["response"], result["steps"])
+
+
+@app.post("/api/execute_lips")
+def execute_lips(file: UploadFile = File(...)):
+    """mp4/webm clip -> VSR -> agent. The clip is deleted in `finally`."""
     suffix = ".webm" if (file.content_type or "").endswith("webm") or (
         file.filename or ""
     ).endswith(".webm") else ".mp4"
@@ -114,19 +144,42 @@ def transcribe(file: UploadFile = File(...)):
         norm_path = _normalize_clip(path)
         try:
             raw = vsr.transcribe_clip(norm_path)
-        except (vsr.NoFaceError, vsr.NoSpeechError) as e:
-            log.info("no transcription: %s", e)
-            return TranscribeResponse(text=_DIDNT_CATCH)
-        corrected = vsr.correct_text(raw)
-        return TranscribeResponse(text=corrected or _DIDNT_CATCH)
+        except vsr.NoFaceError:
+            return _err("No face detected in the clip. Please try again.")
+        except vsr.NoSpeechError:
+            return _err("Didn't catch any speech in the clip. Please try again.")
+        vsr_step = {
+            "module": "vsr",
+            "prompt": {"input": "<video clip>"},
+            "response": {"raw_transcription": raw},
+        }
+        result = run_agent(raw)
+        return _ok(result["response"], [vsr_step, *result["steps"]])
     except Exception as e:  # noqa: BLE001
-        log.exception("transcribe failed")
-        raise HTTPException(status_code=500, detail=f"transcription failed: {e}")
+        log.exception("execute_lips failed")
+        return _err(f"lip-reading failed: {e}")
     finally:
         # PRIVACY: never persist video — delete the clip(s) immediately.
         for p in {path, norm_path}:
             if os.path.exists(p):
                 os.remove(p)
+
+
+# --- supporting endpoints (unchanged contracts) ----------------------------
+
+class SpeakBody(BaseModel):
+    text: str
+    voice_id: str | None = None
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/voices")
+def voices():
+    return {"voices": tts.list_voices()}
 
 
 @app.post("/speak")
@@ -150,7 +203,6 @@ def voice_enroll(file: UploadFile = File(...)):
     data = file.file.read()
     if not data:
         raise HTTPException(status_code=400, detail="empty voice sample")
-    # Persist the sample to object-storage-style local dir (S3-swappable).
     sample_path = config.VOICE_STORAGE_DIR / "local.mp4"
     try:
         sample_path.write_bytes(data)
@@ -171,3 +223,14 @@ def voice_select(body: SelectVoiceBody):
     if not tts.is_valid_voice(body.voice_id):
         raise HTTPException(status_code=400, detail="unknown voice")
     return {"voice_id": body.voice_id, "voice_source": "preset"}
+
+
+# --- SPA at the root URL ----------------------------------------------------
+# Mounted last: explicit routes above always win; everything else serves the
+# built React app (GUI requirement: available on the root url, no auth).
+if SPA_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=SPA_DIST, html=True), name="spa")
+else:
+    @app.get("/")
+    def root():
+        return {"detail": "SPA not built - run `npm run build` in app/ (dev server: npm run dev)"}
