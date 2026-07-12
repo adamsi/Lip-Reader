@@ -196,7 +196,11 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   const btnSize = cameraOn ? "sm" : "md";
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-black">
+    <div
+      className={`fixed inset-0 overflow-hidden ${
+        cameraOn ? "bg-black" : "bg-gradient-to-br from-sky-100 via-violet-100 to-rose-100"
+      }`}
+    >
       {/* Full-screen camera (only while the toggle is on). `-scale-x-100`
           un-mirrors the front-camera preview so it shows the true orientation.
           Display only — the recorded clip sent to the model is unaffected. */}
@@ -210,17 +214,47 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         />
       )}
 
-      {/* Camera off: minimal landing — logo + title, centered. */}
+      {/* Camera off: colorful landing — soft color glows + hero + features. */}
       {!cameraOn && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
-          <img
-            src="/chaplin_logo.png"
-            alt=""
-            className="h-24 w-24 brightness-0 invert opacity-90"
-          />
-          <h1 className="text-4xl font-bold tracking-tight text-white">Chaplin AI</h1>
-          <p className="text-sm text-white/45">Lip-reading communication agent</p>
-        </div>
+        <>
+          <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-violet-300/50 blur-3xl" />
+          <div className="pointer-events-none absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-sky-300/50 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 left-1/3 h-96 w-96 rounded-full bg-amber-200/60 blur-3xl" />
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 overflow-y-auto px-6 py-16 text-center">
+            <img src="/chaplin_logo.png" alt="" className="h-24 w-24 drop-shadow-sm" />
+            <h1 className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-rose-500 bg-clip-text text-5xl font-extrabold tracking-tight text-transparent">
+              Chaplin AI
+            </h1>
+            <p className="max-w-lg text-base leading-relaxed text-gray-600">
+              A communication agent for non-vocal, ventilated patients. Chaplin AI
+              reads your lips from a short webcam clip, corrects the noisy
+              transcription with a reflection agent, and speaks the sentence aloud
+              in a natural voice.
+            </p>
+
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+              <FeatureCard
+                tone="amber"
+                icon={<CameraIcon />}
+                title="Reads lips"
+                text="The Auto-AVSR model transcribes silent speech straight from the camera."
+              />
+              <FeatureCard
+                tone="violet"
+                icon={<BoltIcon className="" />}
+                title="Corrects with AI"
+                text="A LangGraph reflection agent (generate + reflect) fixes the noisy transcript."
+              />
+              <FeatureCard
+                tone="sky"
+                icon={<SpeakerIcon size={15} />}
+                title="Speaks aloud"
+                text="The corrected sentence is voiced word-by-word in a natural voice."
+              />
+            </div>
+          </div>
+        </>
       )}
 
       {/* Dim the camera while a sentence is on screen so the words pop. */}
@@ -228,7 +262,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
 
       {/* Control section, top-right: Run Agent (main), Settings, Info, Camera. */}
       <div
-        className={`absolute right-4 z-30 flex flex-col rounded-3xl border border-white/15 bg-black/45 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-[0_8px_28px_rgba(0,0,0,0.35)] ${
+        className={`absolute right-4 z-30 flex flex-col rounded-3xl border border-white/70 bg-white/60 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-[0_8px_28px_rgba(76,29,149,0.15)] ${
           cameraOn ? "w-44 gap-1.5 p-2" : "w-60 gap-2.5 p-3"
         }`}
         style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
@@ -236,36 +270,36 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         <GlassButton
           size={btnSize}
           onClick={() => setShowAgent(true)}
-          variant="ghost"
-          icon={<BoltIcon className="text-green-400" />}
+          variant="primary"
+          icon={<BoltIcon className="text-lime-300" />}
           label="Run Agent"
-          className="w-full bg-black/55"
+          className="w-full"
         />
         <GlassButton
           size={btnSize}
           onClick={onChangeVoice}
           variant="ghost"
-          icon={<GearIcon />}
+          icon={<span className="text-violet-600"><GearIcon /></span>}
           label="Settings"
-          className="w-full bg-black/55"
+          className="w-full"
         />
         <GlassButton
           size={btnSize}
           onClick={() => setShowAbout(true)}
           variant="ghost"
-          icon={<InfoIcon />}
+          icon={<span className="text-sky-600"><InfoIcon /></span>}
           label="Info"
-          className="w-full bg-black/55"
+          className="w-full"
         />
         {/* Camera on/off — same capsule look, with an Apple-style switch. */}
         <div
-          className={`flex w-full items-center justify-between rounded-full border border-white/30 bg-black/55 font-semibold text-white ${
+          className={`flex w-full items-center justify-between rounded-full border border-white/70 bg-white/85 font-semibold text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_4px_14px_rgba(76,29,149,0.12)] ${
             cameraOn ? "px-4 py-1 text-sm" : "px-5 py-1.5 text-base"
           }`}
         >
-          <span className={`flex items-center ${cameraOn ? "gap-1.5" : "gap-2"}`}>
+          <span className={`flex items-center text-rose-500 ${cameraOn ? "gap-1.5" : "gap-2"}`}>
             <CameraIcon />
-            Camera
+            <span className="text-gray-900">Camera</span>
           </span>
           <Toggle checked={cameraOn} onChange={setCameraOn} small={cameraOn} />
         </div>
@@ -314,7 +348,13 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
       >
         <div className="mx-auto w-full max-w-sm">
           {(error || apiError) && (
-            <p className="mb-3 text-center text-sm font-medium text-red-300">{error || apiError}</p>
+            <p
+              className={`mb-3 text-center text-sm font-medium ${
+                cameraOn ? "text-red-300" : "text-red-600"
+              }`}
+            >
+              {error || apiError}
+            </p>
           )}
 
           {cameraOn && phase === "idle" && (
@@ -363,14 +403,14 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
       {showAgent && <RunAgentPanel onClose={() => setShowAgent(false)} />}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
       {showTrace && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6">
-          <div className="animate-pop flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-zinc-900/95 sm:rounded-3xl">
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <h2 className="text-lg font-bold text-white">Steps trace</h2>
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-gray-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+          <div className="animate-pop flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-white/60 bg-white/95 sm:rounded-3xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h2 className="text-lg font-bold text-gray-900">Steps trace</h2>
               <button
                 onClick={() => setShowTrace(false)}
                 aria-label="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 transition hover:bg-white/20"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200"
               >
                 ✕
               </button>
@@ -401,7 +441,7 @@ function GlassButton({
 }: {
   onClick: () => void;
   disabled?: boolean;
-  variant: "danger" | "ghost";
+  variant: "primary" | "danger" | "ghost";
   icon: React.ReactNode;
   label: string;
   size?: "sm" | "md";
@@ -409,7 +449,16 @@ function GlassButton({
   ariaLabel?: string;
   className?: string;
 }) {
-  const tint = { danger: "bg-red-500/35", ghost: "bg-white/12" }[variant];
+  const look = {
+    // Main action: vivid violet -> fuchsia gradient.
+    primary:
+      "border-white/40 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_8px_24px_rgba(147,51,234,0.4)]",
+    // Clean frosted-white capsule with dark text.
+    ghost:
+      "border-white/70 bg-white/85 text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_4px_14px_rgba(76,29,149,0.12)]",
+    danger:
+      "border-white/40 bg-red-500/85 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_8px_24px_rgba(220,38,38,0.35)]",
+  }[variant];
   const sizing = round
     ? "h-8 w-8 text-sm"
     : size === "sm"
@@ -420,14 +469,43 @@ function GlassButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
-      className={`relative flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full border border-white/30 font-semibold text-white backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] disabled:opacity-50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,0,0,0.25),0_8px_28px_rgba(0,0,0,0.35)] ${sizing} ${tint} ${className}`}
+      className={`relative flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full border font-semibold backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] disabled:opacity-50 ${sizing} ${look} ${className}`}
     >
       <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent" />
-      <span className={`relative flex items-center drop-shadow-sm ${size === "sm" ? "gap-1.5" : "gap-2"}`}>
+      <span className={`relative flex items-center ${size === "sm" ? "gap-1.5" : "gap-2"}`}>
         {icon}
         {label}
       </span>
     </button>
+  );
+}
+
+// Small colorful feature card for the landing page.
+const CARD_TONE: Record<string, string> = {
+  amber: "bg-amber-100 text-amber-600",
+  violet: "bg-violet-100 text-violet-600",
+  sky: "bg-sky-100 text-sky-600",
+};
+
+function FeatureCard({
+  tone,
+  icon,
+  title,
+  text,
+}: {
+  tone: string;
+  icon: React.ReactNode;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="w-64 rounded-2xl border border-white/70 bg-white/70 p-4 text-left shadow-[0_4px_18px_rgba(76,29,149,0.1)] backdrop-blur">
+      <div className={`flex h-9 w-9 items-center justify-center rounded-full ${CARD_TONE[tone]}`}>
+        {icon}
+      </div>
+      <div className="mt-2.5 text-sm font-bold text-gray-900">{title}</div>
+      <p className="mt-1 text-xs leading-relaxed text-gray-600">{text}</p>
+    </div>
   );
 }
 
@@ -449,7 +527,7 @@ function Toggle({
       onClick={() => onChange(!checked)}
       className={`relative shrink-0 rounded-full transition-colors duration-200 ${
         small ? "h-6 w-10" : "h-7 w-12"
-      } ${checked ? "bg-green-500" : "bg-white/25"}`}
+      } ${checked ? "bg-green-500" : "bg-gray-300"}`}
     >
       <span
         className={`absolute left-0.5 top-0.5 rounded-full bg-white shadow-md transition-transform duration-200 ${

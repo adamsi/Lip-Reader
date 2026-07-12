@@ -2,17 +2,17 @@ import { Step } from "../lib/api";
 
 // Per-module accent colors — names match the architecture diagram.
 const MODULE_COLOR: Record<string, string> = {
-  vsr: "bg-amber-500/20 text-amber-300 border-amber-400/30",
-  generate: "bg-violet-500/20 text-violet-300 border-violet-400/30",
-  reflect: "bg-sky-500/20 text-sky-300 border-sky-400/30",
+  vsr: "bg-amber-100 text-amber-700 border-amber-300",
+  generate: "bg-violet-100 text-violet-700 border-violet-300",
+  reflect: "bg-sky-100 text-sky-700 border-sky-300",
 };
 
 function Field({ label, value }: { label: string; value: unknown }) {
   const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
   return (
     <div className="mt-2">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{label}</div>
-      <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-black/40 p-2.5 text-xs leading-relaxed text-white/80">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</div>
+      <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-2.5 text-xs leading-relaxed text-gray-700">
         {text}
       </pre>
     </div>
@@ -27,18 +27,18 @@ export default function StepsTrace({ steps }: { steps: Step[] }) {
       {steps.map((step, i) => (
         <details
           key={i}
-          className="group rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 open:bg-white/[0.07]"
+          className="group rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 open:bg-gray-100/70"
         >
           <summary className="flex cursor-pointer select-none items-center gap-2.5 text-sm">
-            <span className="text-white/35">{i + 1}</span>
+            <span className="text-gray-400">{i + 1}</span>
             <span
               className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-                MODULE_COLOR[step.module] || "bg-white/10 text-white/70 border-white/20"
+                MODULE_COLOR[step.module] || "bg-gray-100 text-gray-600 border-gray-300"
               }`}
             >
               {step.module}
             </span>
-            <span className="truncate text-white/50">
+            <span className="truncate text-gray-500">
               {String(
                 (step.response as Record<string, unknown>).corrected ??
                   (step.response as Record<string, unknown>).verdict ??
@@ -46,7 +46,7 @@ export default function StepsTrace({ steps }: { steps: Step[] }) {
                   ""
               )}
             </span>
-            <span className="ml-auto text-white/30 transition group-open:rotate-90">›</span>
+            <span className="ml-auto text-gray-400 transition group-open:rotate-90">›</span>
           </summary>
           {/* Full trace per the workshop requirements: module, prompt, response. */}
           {Object.entries(step.prompt).map(([k, v]) => (
