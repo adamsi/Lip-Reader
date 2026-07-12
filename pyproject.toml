@@ -14,15 +14,13 @@ dependencies = [
     "torchaudio",
     "transformers==4.44.2",
     "anthropic",
+    "langgraph",
+    "langchain-anthropic",
     "python-dotenv",
     "inworld-tts",
-    "sounddevice",
     "fastapi",
     "uvicorn[standard]",
     "python-multipart",
-    "sqlalchemy>=2.0",
-    "psycopg2-binary",
-    "pyjwt[crypto]",
     "httpx",
 ]
 
