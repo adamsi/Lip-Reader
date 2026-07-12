@@ -41,7 +41,8 @@ async def _lifespan(app: FastAPI):
     # Warm the VSR model in the background at startup (instead of lazily on
     # the first request) so the first clip doesn't pay the model-load time.
     # get_model() is a locked singleton, so a concurrent request just waits.
-    threading.Thread(target=vsr.get_model, daemon=True).start()
+    if not config.DISABLE_VSR:
+        threading.Thread(target=vsr.get_model, daemon=True).start()
     yield
 
 
@@ -133,6 +134,12 @@ def execute(body: ExecuteBody):
 @app.post("/api/execute_lips")
 def execute_lips(file: UploadFile = File(...)):
     """mp4/webm clip -> VSR -> agent. The clip is deleted in `finally`."""
+    if config.DISABLE_VSR:
+        return _err(
+            "Lip-reading is not available on this deployment (the VSR model "
+            "is too large for serverless). Use Run Agent / POST /api/execute "
+            "with text instead."
+        )
     suffix = ".webm" if (file.content_type or "").endswith("webm") or (
         file.filename or ""
     ).endswith(".webm") else ".mp4"

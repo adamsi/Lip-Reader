@@ -1,0 +1,14 @@
+# Serverless (Vercel) dependencies — the VSR stack (torch/mediapipe/opencv)
+# is intentionally absent: DISABLE_VSR is auto-set on Vercel and
+# /api/execute_lips returns a graceful error there.
+# Local development uses uv + pyproject.toml instead (full stack).
+fastapi
+python-multipart
+pydantic
+langgraph
+langchain-anthropic
+anthropic
+python-dotenv
+httpx
+inworld-tts
+av
