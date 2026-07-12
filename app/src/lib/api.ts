@@ -1,9 +1,60 @@
-// Thin client for the Chaplin AI backend. No auth — the API is open on
-// localhost and the selected voice is sent along with each /speak call.
+// Thin client for the Chaplin AI backend. No auth — the API is open.
+// In dev the Vite server talks to the backend on :8000; the production build
+// is served by the backend itself, so relative URLs work.
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const API_BASE =
+  import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 export type Voice = { id: string; name: string; description?: string; gender?: string };
+
+// One traced LLM/VSR call of the agent workflow.
+export type Step = {
+  module: string;
+  prompt: Record<string, unknown>;
+  response: Record<string, unknown>;
+};
+
+export type ExecuteResult = { response: string; steps: Step[] };
+
+type ExecuteEnvelope = {
+  status: "ok" | "error";
+  error: string | null;
+  response: string | null;
+  steps: Step[];
+};
+
+function unwrap(data: ExecuteEnvelope): ExecuteResult {
+  if (data.status !== "ok" || !data.response) {
+    throw new Error(data.error || "agent failed");
+  }
+  return { response: data.response, steps: data.steps || [] };
+}
+
+/** Text prompt -> corrected sentence + full steps trace. */
+export async function executeText(prompt: string): Promise<ExecuteResult> {
+  const res = await fetch(`${API_BASE}/api/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) throw new Error(`/api/execute failed: ${res.status}`);
+  return unwrap(await res.json());
+}
+
+/** Webcam clip -> VSR -> agent -> corrected sentence + steps trace. */
+export async function executeLips(clip: Blob): Promise<ExecuteResult> {
+  const form = new FormData();
+  const ext = clip.type.includes("webm") ? "webm" : "mp4";
+  form.append("file", clip, `clip.${ext}`);
+  const res = await fetch(`${API_BASE}/api/execute_lips`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) throw new Error(`/api/execute_lips failed: ${res.status}`);
+  return unwrap(await res.json());
+}
+
+export const architectureUrl = `${API_BASE}/api/model_architecture`;
 
 export async function getVoices(): Promise<Voice[]> {
   const res = await fetch(`${API_BASE}/voices`);
@@ -31,18 +82,6 @@ export async function enrollVoice(clip: Blob): Promise<string> {
   });
   if (!res.ok) throw new Error(`/voice/enroll failed: ${res.status}`);
   return (await res.json()).voice_id;
-}
-
-export async function transcribe(clip: Blob): Promise<string> {
-  const form = new FormData();
-  const ext = clip.type.includes("webm") ? "webm" : "mp4";
-  form.append("file", clip, `clip.${ext}`);
-  const res = await fetch(`${API_BASE}/transcribe`, {
-    method: "POST",
-    body: form,
-  });
-  if (!res.ok) throw new Error(`/transcribe failed: ${res.status}`);
-  return (await res.json()).text;
 }
 
 // A token of spoken text with the audio time (seconds) at which it begins —

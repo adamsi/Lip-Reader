@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { speak, SpokenToken, transcribe } from "../lib/api";
+import { executeLips, speak, SpokenToken, Step } from "../lib/api";
 import { getStoredVoiceId } from "../lib/voice";
 import { useRecorder } from "../lib/useRecorder";
-import UserMenu from "./UserMenu";
+import AboutModal from "./AboutModal";
+import RunAgentPanel from "./RunAgentPanel";
 import Spinner from "./Spinner";
+import StepsTrace from "./StepsTrace";
+import UserMenu from "./UserMenu";
 
 // Simple communication-turn loop:
 //   idle ── Talk ──▶ recording ── Stop ──▶ thinking ──▶ review
@@ -21,6 +24,10 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   const [preparing, setPreparing] = useState(false); // fetching audio
   const [recSeconds, setRecSeconds] = useState(0);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [steps, setSteps] = useState<Step[]>([]); // trace of the last lip-read run
+  const [showAgent, setShowAgent] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showTrace, setShowTrace] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -60,6 +67,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     setText("");
     setTokens([]);
     setSpoken(0);
+    setSteps([]);
     setApiError(null);
   }
 
@@ -76,15 +84,16 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     const clip = await stop();
     if (!clip) return setPhase("idle");
     try {
-      const result = await transcribe(clip);
-      if (/^i didn'?t catch/i.test(result)) {
-        setApiError("Didn't catch that — try again.");
-        return setPhase("idle");
-      }
-      setText(result);
+      const result = await executeLips(clip);
+      setText(result.response);
+      setSteps(result.steps);
       setPhase("review"); // show the sentence; the human confirms before voicing
-    } catch {
-      setApiError("Something went wrong. Tap Talk to try again.");
+    } catch (e) {
+      // The backend returns a human-readable error (no face / no speech).
+      const msg = e instanceof Error && /try again/i.test(e.message)
+        ? e.message
+        : "Something went wrong. Tap Talk to try again.";
+      setApiError(msg);
       setPhase("idle");
     }
   }
@@ -168,6 +177,27 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         <UserMenu onChangeVoice={onChangeVoice} />
       </div>
 
+      {/* Run Agent + About, top-right. */}
+      <div
+        className="absolute right-4 z-30 flex items-center gap-2"
+        style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
+      >
+        <button
+          onClick={() => setShowAgent(true)}
+          className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-sm font-semibold text-white backdrop-blur-xl transition hover:bg-white/20 active:scale-95"
+        >
+          <BoltIcon />
+          Run Agent
+        </button>
+        <button
+          onClick={() => setShowAbout(true)}
+          aria-label="About"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-white/10 text-sm font-bold text-white backdrop-blur-xl transition hover:bg-white/20 active:scale-95"
+        >
+          i
+        </button>
+      </div>
+
       {/* Recording status pill, top-center. */}
       {phase === "recording" && (
         <div
@@ -244,8 +274,40 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           {phase === "speaking" && (
             <GlassButton className="w-full" onClick={interrupt} variant="danger" icon={<StopIcon />} label="Stop" />
           )}
+
+          {/* How the sentence was produced — opens the agent steps trace. */}
+          {phase === "review" && steps.length > 0 && (
+            <button
+              onClick={() => setShowTrace(true)}
+              className="mx-auto mt-3 block text-center text-xs font-medium text-white/50 underline-offset-2 hover:text-white/80 hover:underline"
+            >
+              View agent steps ({steps.length})
+            </button>
+          )}
         </div>
       </div>
+
+      {showAgent && <RunAgentPanel onClose={() => setShowAgent(false)} />}
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showTrace && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+          <div className="animate-pop flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-zinc-900/95 sm:rounded-3xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+              <h2 className="text-lg font-bold text-white">Steps trace</h2>
+              <button
+                onClick={() => setShowTrace(false)}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 transition hover:bg-white/20"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="overflow-y-auto px-5 py-4">
+              <StepsTrace steps={steps} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -286,6 +348,11 @@ function GlassButton({
 
 /* — inline icons (no icon dependency) — */
 const RecordDot = () => <span className="h-3 w-3 rounded-full bg-red-500" />;
+const BoltIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+  </svg>
+);
 const StopIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
     <rect x="6" y="6" width="12" height="12" rx="2" />
