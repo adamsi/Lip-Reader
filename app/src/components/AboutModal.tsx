@@ -66,6 +66,19 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
             </p>
           </div>
 
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              API
+            </div>
+            <div className="mt-1.5 divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/60">
+              <ApiRow method="GET" path="/api/team_info" text="student and team details" />
+              <ApiRow method="GET" path="/api/agent_info" text="agent description, prompts, examples" />
+              <ApiRow method="GET" path="/api/model_architecture" text="architecture diagram (PNG)" />
+              <ApiRow method="POST" path="/api/execute" text="correct a text prompt" />
+              <ApiRow method="POST" path="/api/execute_lips" text="lip-read a video clip" />
+            </div>
+          </div>
+
           <div className="border-t border-gray-200 pt-4 text-center">
             <p className="text-base font-semibold text-gray-900">Adam Sion &amp; Jonathan Eshel</p>
             <p className="mt-0.5 text-sm text-gray-500">Chaplin AI</p>
@@ -88,6 +101,25 @@ function Chip({ c, children }: { c: string; children: React.ReactNode }) {
     <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${CHIP[c]}`}>
       {children}
     </span>
+  );
+}
+
+const METHOD_STYLE: Record<string, string> = {
+  GET: "bg-gray-200 text-gray-700",
+  POST: "bg-violet-200 text-violet-800",
+};
+
+function ApiRow({ method, path, text }: { method: string; path: string; text: string }) {
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2 text-xs">
+      <span
+        className={`w-11 shrink-0 rounded-md py-0.5 text-center font-mono font-bold ${METHOD_STYLE[method]}`}
+      >
+        {method}
+      </span>
+      <code className="shrink-0 font-mono font-medium text-gray-800">{path}</code>
+      <span className="truncate text-gray-500">{text}</span>
+    </div>
   );
 }
 

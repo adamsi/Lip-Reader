@@ -48,3 +48,33 @@ body {
 .animate-fade-up {
   animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Slow ambient drift for the background color glows on the landing page. */
+@keyframes floatSlow {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(14px, -18px);
+  }
+}
+.animate-float-slow {
+  animation: floatSlow 9s ease-in-out infinite;
+}
+
+/* Soft pulsing glow behind the logo on the landing page. */
+@keyframes glowPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.12);
+  }
+}
+.animate-glow-pulse {
+  animation: glowPulse 3.2s ease-in-out infinite;
+}

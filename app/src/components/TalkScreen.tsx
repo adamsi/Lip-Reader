@@ -220,20 +220,27 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         />
       )}
 
-      {/* Camera off: colorful landing — soft color glows + hero + features. */}
+      {/* Camera off: colorful landing — soft ambient glows + hero + a pipeline
+          of chips that mirrors the vsr -> generate/reflect -> speak flow. */}
       {!cameraOn && (
         <>
-          <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-violet-200/50 blur-3xl" />
-          <div className="pointer-events-none absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-sky-200/50 blur-3xl" />
+          <div className="animate-float-slow pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-violet-200/50 blur-3xl" />
+          <div
+            className="animate-float-slow pointer-events-none absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-indigo-200/45 blur-3xl"
+            style={{ animationDelay: "-4s" }}
+          />
 
           {/* The copy streams onto the screen line by line (staggered fade-up). */}
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-y-auto px-6 py-16 text-center">
-            <img
-              src="/chaplin_logo.png"
-              alt=""
-              className="animate-fade-up h-24 w-24 drop-shadow-sm"
-              style={{ animationDelay: "0.05s" }}
-            />
+            <div className="relative">
+              <div className="animate-glow-pulse absolute inset-0 rounded-full bg-violet-400/40 blur-2xl" />
+              <img
+                src="/chaplin_logo.png"
+                alt=""
+                className="animate-fade-up relative h-24 w-24 drop-shadow-sm"
+                style={{ animationDelay: "0.05s" }}
+              />
+            </div>
             <h1
               className="animate-fade-up bg-gradient-to-r from-violet-700 via-violet-600 to-indigo-600 bg-clip-text text-5xl font-extrabold tracking-tight text-transparent"
               style={{ animationDelay: "0.25s" }}
@@ -247,31 +254,42 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
             >
               A communication agent for non-vocal, ventilated patients.
             </p>
-            <p
-              className="animate-fade-up max-w-lg text-lg text-gray-700 sm:text-xl"
-              style={{ animationDelay: "0.95s" }}
-            >
-              Chaplin AI <span className="font-semibold text-violet-600">reads your lips</span>{" "}
-              from a short webcam clip,
-            </p>
-            {/* The last two sentences stream in word by word. */}
-            <StreamWords
-              className="max-w-lg text-base text-gray-600 sm:text-lg"
-              base={1.45}
-              segments={[
-                { text: "corrects", className: "font-semibold text-violet-600" },
-                { text: "the noisy transcription with a reflection agent," },
-              ]}
-            />
-            <StreamWords
-              className="max-w-lg text-base text-gray-600 sm:text-lg"
-              base={2.5}
-              segments={[
-                { text: "and" },
-                { text: "speaks the sentence aloud", className: "font-semibold text-violet-600" },
-                { text: "in a natural voice." },
-              ]}
-            />
+
+            {/* Pipeline of chips — one per stage, connected by a line. */}
+            <div className="relative mt-3 w-full max-w-lg text-left">
+              <div className="pointer-events-none absolute bottom-6 left-[22px] top-6 w-0.5 bg-gradient-to-b from-violet-300 via-indigo-300 to-blue-300" />
+              <div className="space-y-4">
+                <TimelineChip icon={<CameraIcon />} tone="violet" delay="0.85s">
+                  <p className="text-base font-medium text-gray-800 sm:text-lg">
+                    Chaplin AI <span className="font-semibold text-violet-600">reads your lips</span>{" "}
+                    from a short webcam clip,
+                  </p>
+                </TimelineChip>
+                <TimelineChip icon={<BoltIcon />} tone="indigo" delay="1.3s">
+                  {/* Streams in word by word. */}
+                  <StreamWords
+                    className="text-base text-gray-700 sm:text-lg"
+                    base={1.5}
+                    segments={[
+                      { text: "corrects", className: "font-semibold text-indigo-600" },
+                      { text: "the noisy transcription with a reflection agent," },
+                    ]}
+                  />
+                </TimelineChip>
+                <TimelineChip icon={<SpeakerIcon size={17} />} tone="blue" delay="2.35s">
+                  {/* Streams in word by word. */}
+                  <StreamWords
+                    className="text-base text-gray-700 sm:text-lg"
+                    base={2.55}
+                    segments={[
+                      { text: "and" },
+                      { text: "speaks the sentence aloud", className: "font-semibold text-blue-600" },
+                      { text: "in a natural voice." },
+                    ]}
+                  />
+                </TimelineChip>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -500,7 +518,7 @@ function GlassButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
-      className={`relative flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full border font-semibold backdrop-blur-2xl backdrop-saturate-[1.8] transition active:scale-[0.97] disabled:opacity-50 ${sizing} ${look} ${className}`}
+      className={`relative flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full border font-semibold backdrop-blur-2xl backdrop-saturate-[1.8] transition hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 ${sizing} ${look} ${className}`}
     >
       <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent" />
       <span className={`relative flex items-center ${size === "sm" ? "gap-1.5" : "gap-2"}`}>
@@ -508,6 +526,39 @@ function GlassButton({
         {label}
       </span>
     </button>
+  );
+}
+
+// One node of the landing pipeline: an icon bubble + a chip card, connected
+// by the vertical line drawn behind the stack.
+const TONE: Record<string, string> = {
+  violet: "bg-violet-100 text-violet-600",
+  indigo: "bg-indigo-100 text-indigo-600",
+  blue: "bg-blue-100 text-blue-600",
+};
+
+function TimelineChip({
+  icon,
+  tone,
+  delay,
+  children,
+}: {
+  icon: React.ReactNode;
+  tone: string;
+  delay: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="animate-fade-up flex items-start gap-4" style={{ animationDelay: delay }}>
+      <span
+        className={`relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-4 ring-white/90 ${TONE[tone]}`}
+      >
+        {icon}
+      </span>
+      <div className="flex-1 rounded-2xl border border-white/70 bg-white/70 px-4 py-3 shadow-[0_4px_16px_rgba(76,29,149,0.08)] backdrop-blur">
+        {children}
+      </div>
+    </div>
   );
 }
 
