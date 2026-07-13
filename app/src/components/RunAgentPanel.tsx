@@ -35,8 +35,11 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-gray-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="animate-pop flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-white/60 bg-white/95 sm:rounded-3xl">
+    <div
+      className="fixed inset-0 z-40 flex items-start justify-center bg-gray-900/40 px-4 pb-4 backdrop-blur-sm sm:items-center sm:p-6"
+      style={{ paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}
+    >
+      <div className="animate-pop flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/95 sm:max-h-[92vh]">
         {/* header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
           <div>

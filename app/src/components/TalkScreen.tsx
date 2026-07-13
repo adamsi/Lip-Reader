@@ -231,25 +231,25 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           />
 
           {/* The copy streams onto the screen line by line (staggered fade-up). */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-y-auto px-6 py-16 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-5 pt-32 pb-10 text-center sm:gap-4 sm:px-6 sm:py-16">
             <div className="relative">
               <div className="animate-glow-pulse absolute inset-0 rounded-full bg-violet-400/40 blur-2xl" />
               <img
                 src="/chaplin_logo.png"
                 alt=""
-                className="animate-fade-up relative h-24 w-24 drop-shadow-sm"
+                className="animate-fade-up relative h-16 w-16 drop-shadow-sm sm:h-24 sm:w-24"
                 style={{ animationDelay: "0.05s" }}
               />
             </div>
             <h1
-              className="animate-fade-up bg-gradient-to-r from-violet-700 via-violet-600 to-indigo-600 bg-clip-text text-5xl font-extrabold tracking-tight text-transparent"
+              className="animate-fade-up bg-gradient-to-r from-violet-700 via-violet-600 to-indigo-600 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-5xl"
               style={{ animationDelay: "0.25s" }}
             >
               Chaplin AI
             </h1>
 
             <p
-              className="animate-fade-up mt-3 max-w-xl text-2xl font-semibold leading-snug text-gray-800 sm:text-3xl"
+              className="animate-fade-up mt-3 max-w-xl text-lg font-semibold leading-snug text-gray-800 sm:text-2xl sm:text-3xl"
               style={{ animationDelay: "0.55s" }}
             >
               A communication agent for non-vocal, ventilated patients.
@@ -260,7 +260,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
               <div className="pointer-events-none absolute bottom-6 left-[22px] top-6 w-0.5 bg-gradient-to-b from-violet-300 via-indigo-300 to-blue-300" />
               <div className="space-y-4">
                 <TimelineChip icon={<CameraIcon />} tone="violet" delay="0.85s">
-                  <p className="text-base font-medium text-gray-800 sm:text-lg">
+                  <p className="text-sm font-medium text-gray-800 sm:text-lg">
                     Chaplin AI <span className="font-semibold text-violet-600">reads your lips</span>{" "}
                     from a short webcam clip,
                   </p>
@@ -268,7 +268,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
                 <TimelineChip icon={<BoltIcon />} tone="indigo" delay="1.3s">
                   {/* Streams in word by word. */}
                   <StreamWords
-                    className="text-base text-gray-700 sm:text-lg"
+                    className="text-sm text-gray-700 sm:text-lg"
                     base={1.5}
                     segments={[
                       { text: "corrects", className: "font-semibold text-indigo-600" },
@@ -279,7 +279,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
                 <TimelineChip icon={<SpeakerIcon size={17} />} tone="blue" delay="2.35s">
                   {/* Streams in word by word. */}
                   <StreamWords
-                    className="text-base text-gray-700 sm:text-lg"
+                    className="text-sm text-gray-700 sm:text-lg"
                     base={2.55}
                     segments={[
                       { text: "and" },
@@ -311,10 +311,12 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
 
       {/* Control section, top-right: Run Agent (main), Settings, Info, Camera. */}
       <div
-        className={`absolute right-4 z-30 flex flex-col rounded-3xl border border-white/70 bg-white/60 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-[0_8px_28px_rgba(76,29,149,0.15)] ${
-          cameraOn ? "w-44 gap-1.5 p-2" : "w-60 gap-2.5 p-3"
+        className={`absolute right-2 z-30 flex flex-col rounded-2xl border border-white/70 bg-white/60 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-[0_8px_28px_rgba(76,29,149,0.15)] sm:right-4 sm:rounded-3xl ${
+          cameraOn
+            ? "w-32 gap-1 p-1.5 sm:w-44 sm:gap-1.5 sm:p-2"
+            : "w-36 gap-1 p-1.5 sm:w-60 sm:gap-2.5 sm:p-3"
         }`}
-        style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
+        style={{ top: "calc(env(safe-area-inset-top) + 8px)" }}
       >
         <GlassButton
           size={btnSize}
@@ -326,27 +328,29 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         />
         <GlassButton
           size={btnSize}
-          onClick={onChangeVoice}
-          variant="ghost"
-          icon={<span className="text-gray-500"><GearIcon /></span>}
-          label="Settings"
-          className="w-full"
-        />
-        <GlassButton
-          size={btnSize}
           onClick={() => setShowAbout(true)}
           variant="ghost"
           icon={<span className="text-gray-500"><InfoIcon /></span>}
           label="Info"
           className="w-full"
         />
+        <GlassButton
+          size={btnSize}
+          onClick={onChangeVoice}
+          variant="ghost"
+          icon={<span className="text-gray-500"><GearIcon /></span>}
+          label="Settings"
+          className="w-full"
+        />
         {/* Camera on/off — same capsule look, with an Apple-style switch. */}
         <div
           className={`flex w-full items-center justify-between rounded-full border border-white/70 bg-white/85 font-semibold text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_4px_14px_rgba(76,29,149,0.12)] ${
-            cameraOn ? "px-4 py-1 text-sm" : "px-5 py-1.5 text-base"
+            cameraOn
+              ? "px-3 py-0.5 text-xs sm:px-4 sm:py-1 sm:text-sm"
+              : "px-3.5 py-1 text-sm sm:px-5 sm:py-1.5 sm:text-base"
           }`}
         >
-          <span className={`flex items-center text-gray-500 ${cameraOn ? "gap-1.5" : "gap-2"}`}>
+          <span className={`flex items-center text-gray-500 ${cameraOn ? "gap-1" : "gap-1.5"} sm:gap-2`}>
             <CameraIcon />
             <span className="text-gray-900">Camera</span>
           </span>
@@ -511,8 +515,8 @@ function GlassButton({
   const sizing = round
     ? "h-8 w-8 text-sm"
     : size === "sm"
-      ? "px-4 py-1.5 text-sm"
-      : "px-8 py-2.5 text-base";
+      ? "px-3 py-1 text-xs sm:px-4 sm:py-1.5 sm:text-sm"
+      : "px-5 py-1.5 text-sm sm:px-8 sm:py-2.5 sm:text-base";
   return (
     <button
       onClick={onClick}
@@ -521,7 +525,7 @@ function GlassButton({
       className={`relative flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full border font-semibold backdrop-blur-2xl backdrop-saturate-[1.8] transition hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 ${sizing} ${look} ${className}`}
     >
       <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent" />
-      <span className={`relative flex items-center ${size === "sm" ? "gap-1.5" : "gap-2"}`}>
+      <span className={`relative flex items-center gap-1 ${size === "sm" ? "sm:gap-1.5" : "sm:gap-2"}`}>
         {icon}
         {label}
       </span>

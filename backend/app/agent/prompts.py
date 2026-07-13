@@ -20,12 +20,12 @@ GENERATE_SYSTEM_PROMPT = (
     "ALWAYS end each sentence with '.', '?' or '!'.\n"
     "- If given reviewer feedback on a previous attempt, address it.\n\n"
     "Examples:\n"
-    "Input: IM SO EXCITED TO ME YOU TODAY\n"
-    "Output: I'm so excited to meet you today.\n"
-    "Input: PLEASE BRING ME A GLASS OF WHAT ER\n"
-    "Output: Please bring me a glass of water.\n"
-    "Input: CAN YOU TURN OF THE LIGHT\n"
-    "Output: Can you turn off the light?"
+    "Input: CAN YOU TURN UP THE VAN\n"
+    "Output: Can you turn up the fan?\n"
+    "Input: I NEED MY BEDICINE NOW\n"
+    "Output: I need my medicine now.\n"
+    "Input: I WOULD LIKE TO REAT A BOOK\n"
+    "Output: I would like to read a book."
 )
 
 # --- reflect ----------------------------------------------------------------
@@ -40,8 +40,8 @@ REFLECT_SYSTEM_PROMPT = (
     "unnatural phrasing, missing punctuation, or content that was invented. "
     "Give one short, actionable sentence of feedback.\n\n"
     "Examples:\n"
-    "Raw: IM SO EXCITED TO ME YOU TODAY | Correction: I'm so excited to meet you today.\n"
+    "Raw: CAN YOU TURN UP THE VAN | Correction: Can you turn up the fan?\n"
     "-> approve\n"
-    "Raw: PLEASE BRING ME A GLASS OF WHAT ER | Correction: Please bring me a glass of what er.\n"
-    "-> revise: 'what er' is a mistranscription; it should read 'water'."
+    "Raw: I NEED MY BEDICINE NOW | Correction: I need my bedicine now.\n"
+    "-> revise: 'bedicine' is a mistranscription; it should read 'medicine'."
 )
