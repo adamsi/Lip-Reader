@@ -58,6 +58,12 @@ export async function executeLips(clip: Blob): Promise<ExecuteResult> {
   return unwrap(await res.json());
 }
 
+/** Fire-and-forget ping so the backend's cold start (container boot + VSR
+ * model load on Modal) begins the moment the page loads, not on first use. */
+export function warmBackend(): void {
+  fetch(`${API_BASE}/health`).catch(() => {});
+}
+
 /** Whether this deployment can run the lip-reading model (false on serverless). */
 export async function vsrAvailable(): Promise<boolean> {
   try {

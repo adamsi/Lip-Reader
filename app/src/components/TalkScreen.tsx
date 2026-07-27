@@ -313,8 +313,8 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
       <div
         className={`absolute right-2 z-30 flex flex-col rounded-2xl border border-white/70 bg-white/60 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-[0_8px_28px_rgba(76,29,149,0.15)] sm:right-4 sm:rounded-3xl ${
           cameraOn
-            ? "w-32 gap-1 p-1.5 sm:w-44 sm:gap-1.5 sm:p-2"
-            : "w-36 gap-1 p-1.5 sm:w-60 sm:gap-2.5 sm:p-3"
+            ? "w-36 gap-1 p-1.5 sm:w-44 sm:gap-1.5 sm:p-2"
+            : "w-40 gap-1.5 p-1.5 sm:w-60 sm:gap-2.5 sm:p-3"
         }`}
         style={{ top: "calc(env(safe-area-inset-top) + 8px)" }}
       >
@@ -344,10 +344,10 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         />
         {/* Camera on/off — same capsule look, with an Apple-style switch. */}
         <div
-          className={`flex w-full items-center justify-between rounded-full border border-white/70 bg-white/85 font-semibold text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_4px_14px_rgba(76,29,149,0.12)] ${
+          className={`flex w-full items-center justify-between gap-2 rounded-full border border-white/70 bg-white/85 font-semibold text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_4px_14px_rgba(76,29,149,0.12)] ${
             cameraOn
-              ? "px-3 py-0.5 text-xs sm:px-4 sm:py-1 sm:text-sm"
-              : "px-3.5 py-1 text-sm sm:px-5 sm:py-1.5 sm:text-base"
+              ? "px-2.5 py-1 text-xs sm:px-4 sm:py-1 sm:text-sm"
+              : "px-3 py-1 text-sm sm:px-5 sm:py-1.5 sm:text-base"
           }`}
         >
           <span className={`flex items-center text-gray-500 ${cameraOn ? "gap-1" : "gap-1.5"} sm:gap-2`}>
@@ -607,20 +607,25 @@ function Toggle({
   onChange: (v: boolean) => void;
   small?: boolean;
 }) {
+  // Track/knob scale down at the base breakpoint so the switch fits next to
+  // the "Camera" label inside the narrow mobile panel (no overlap).
+  const track = small ? "h-5 w-9 sm:h-6 sm:w-10" : "h-6 w-10 sm:h-7 sm:w-12";
+  const knob = small ? "h-4 w-4 sm:h-5 sm:w-5" : "h-5 w-5 sm:h-6 sm:w-6";
+  const shift = small ? "translate-x-4" : "translate-x-4 sm:translate-x-5";
   return (
     <button
       role="switch"
       aria-checked={checked}
       aria-label="Camera"
       onClick={() => onChange(!checked)}
-      className={`relative shrink-0 rounded-full transition-colors duration-200 ${
-        small ? "h-6 w-10" : "h-7 w-12"
-      } ${checked ? "bg-green-500" : "bg-gray-300"}`}
+      className={`relative shrink-0 rounded-full transition-colors duration-200 ${track} ${
+        checked ? "bg-green-500" : "bg-gray-300"
+      }`}
     >
       <span
-        className={`absolute left-0.5 top-0.5 rounded-full bg-white shadow-md transition-transform duration-200 ${
-          small ? "h-5 w-5" : "h-6 w-6"
-        } ${checked ? (small ? "translate-x-4" : "translate-x-5") : ""}`}
+        className={`absolute left-0.5 top-0.5 rounded-full bg-white shadow-md transition-transform duration-200 ${knob} ${
+          checked ? shift : ""
+        }`}
       />
     </button>
   );
