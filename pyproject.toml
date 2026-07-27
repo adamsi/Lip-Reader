@@ -22,6 +22,7 @@ dependencies = [
     "uvicorn[standard]",
     "python-multipart",
     "httpx",
+    "modal",
 ]
 
 [project.optional-dependencies]

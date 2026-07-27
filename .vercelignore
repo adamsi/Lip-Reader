@@ -1,13 +1,11 @@
-# Heavy / local-only files that must not ship to the serverless function.
+# Vercel only builds/serves the SPA (app/); the backend runs on Modal.
 .env
 app/.env
 .venv
 .claude
 .pytest_cache
 app/node_modules
-backend/espnet
-backend/pipelines
-backend/storage
+backend
 benchmarks
 tests
 spec
@@ -18,7 +16,5 @@ project_requierments.pdf
 plan-to-implement.md
 *.mp4
 *.mov
-# Force the Python runtime to install from requirements.txt (pip), not
-# pyproject/uv (which would pull the full torch stack).
 pyproject.toml
 uv.lock
