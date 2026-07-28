@@ -1,4 +1,4 @@
-import { API_BASE, architectureUrl } from "../lib/api";
+import { API_BASE, VSR_BASE, architectureUrl } from "../lib/api";
 
 /** Logo + short explanation of the system, its architecture, and how to use it. */
 export default function AboutModal({ onClose }: { onClose: () => void }) {
@@ -64,8 +64,8 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
             </ul>
             <p className="mt-2.5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700">
               <WarnIcon className="mt-0.5 shrink-0" />
-              Talk (camera recording) is available only while running locally - not on the
-              Vercel deployment.
+              Lip-reading runs on a separate GPU service - the first Talk after a while may
+              take a moment while it warms up.
             </p>
           </div>
 
@@ -73,26 +73,41 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
               API
             </div>
-            {API_BASE && (
-              <p className="mt-1 text-xs text-gray-500">
-                Base URL:{" "}
-                <a
-                  href={API_BASE}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono font-medium text-violet-600 hover:underline"
-                >
-                  {API_BASE}
-                </a>
-              </p>
-            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Base URL:{" "}
+              <a
+                href={API_BASE || window.location.origin}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono font-medium text-violet-600 hover:underline"
+              >
+                {API_BASE || window.location.origin}
+              </a>
+            </p>
             <div className="mt-1.5 divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/60">
               <ApiRow method="GET" path="/api/team_info" text="student and team details" />
               <ApiRow method="GET" path="/api/agent_info" text="agent description, prompts, examples" />
               <ApiRow method="GET" path="/api/model_architecture" text="architecture diagram (PNG)" />
               <ApiRow method="POST" path="/api/execute" text="correct a text prompt" />
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Lip-reading is served by the separate <span className="font-medium text-gray-700">vsr_lip_reader</span>{" "}
+              service (GPU, on Modal):
+            </p>
+            <div className="mt-1.5 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/60">
               <ApiRow method="POST" path="/api/execute_lips" text="lip-read a video clip" />
             </div>
+            <p className="mt-1 break-all text-xs text-gray-500">
+              at{" "}
+              <a
+                href={VSR_BASE}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono font-medium text-violet-600 hover:underline"
+              >
+                {VSR_BASE}
+              </a>
+            </p>
           </div>
 
           <div className="border-t border-gray-200 pt-4 text-center">

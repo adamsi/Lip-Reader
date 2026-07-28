@@ -1,14 +1,17 @@
-"""End-to-end check for the Chaplin AI backend.
+"""End-to-end check for the Chaplin AI services.
 
-Exercises the real request path against the FastAPI app in-process
+Exercises the real request path against both FastAPI apps in-process
 (FastAPI TestClient), printing PASS/FAIL per stage:
 
+  API backend (backend/app/main.py — Vercel in production):
     GET  /api/team_info
     GET  /api/agent_info
     GET  /api/model_architecture
     POST /api/execute        (text prompt -> agent)
-    POST /api/execute_lips   (clip -> VSR -> agent)
     POST /speak
+
+  vsr_lip_reader service (backend/app/vsr_main.py — Modal in production):
+    POST /api/execute_lips   (clip -> VSR -> agent)
 
 It captures a short webcam clip when a camera is available; otherwise it
 falls back to a synthetic clip so the full plumbing (temp-file handling,
@@ -75,6 +78,7 @@ def main() -> int:
     from fastapi.testclient import TestClient
 
     from backend.app.main import app
+    from backend.app.vsr_main import app as vsr_app
 
     ok = {"env": False, "team_info": False, "agent_info": False,
           "architecture": False, "execute": False, "execute_lips": False,
@@ -140,13 +144,14 @@ def main() -> int:
         ok["execute"] = False
         print("ERROR-shape check failed:", err)
 
-    step("6/7  POST /api/execute_lips")
+    step("6/7  POST /api/execute_lips (vsr_lip_reader service)")
+    vsr_client = TestClient(vsr_app)
     clip_path, kind = make_clip()
     speak_text = "Hello from Chaplin."
     try:
         t0 = time.time()
         with open(clip_path, "rb") as f:
-            r = client.post("/api/execute_lips", files={"file": ("clip.mp4", f, "video/mp4")})
+            r = vsr_client.post("/api/execute_lips", files={"file": ("clip.mp4", f, "video/mp4")})
         dt = time.time() - t0
         body = r.json() if r.status_code == 200 else {}
         print(f"status: {r.status_code}  latency: {dt:.1f}s  clip: {kind}")

@@ -1,12 +1,23 @@
-// Thin client for the Chaplin AI backend. No auth — the API is open.
-// In dev the Vite server talks to the backend on :8000; the production build
-// is served by the backend itself, so relative URLs work.
+// Thin client for the Chaplin AI services. No auth — the API is open.
+//
+// Two backends:
+//  - API backend (team/agent info, /api/execute, TTS/voices) — deployed on
+//    Vercel next to this SPA, so relative URLs work in production. In dev it
+//    runs locally on :8000.
+//  - vsr_lip_reader service (/api/execute_lips + /health) — GPU-heavy, on
+//    Modal. In dev it runs locally on :8001 (launch config "chaplin-vsr").
 
 const API_BASE =
   import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
-// Exposed so the UI (About modal) can show where the API actually lives.
-export { API_BASE };
+const VSR_BASE =
+  import.meta.env.VITE_VSR_API_BASE ||
+  (import.meta.env.DEV
+    ? "http://localhost:8001"
+    : "https://adamsi--chaplin-ai-backend.modal.run");
+
+// Exposed so the UI (About modal) can show where each service actually lives.
+export { API_BASE, VSR_BASE };
 
 export type Voice = { id: string; name: string; description?: string; gender?: string };
 
@@ -49,7 +60,7 @@ export async function executeLips(clip: Blob): Promise<ExecuteResult> {
   const form = new FormData();
   const ext = clip.type.includes("webm") ? "webm" : "mp4";
   form.append("file", clip, `clip.${ext}`);
-  const res = await fetch(`${API_BASE}/api/execute_lips`, {
+  const res = await fetch(`${VSR_BASE}/api/execute_lips`, {
     method: "POST",
     body: form,
   });
@@ -61,16 +72,17 @@ export async function executeLips(clip: Blob): Promise<ExecuteResult> {
   return unwrap(await res.json());
 }
 
-/** Fire-and-forget ping so the backend's cold start (container boot + VSR
- * model load on Modal) begins the moment the page loads, not on first use. */
+/** Fire-and-forget pings so cold starts (Modal container boot + VSR model
+ * load) begin the moment the page loads, not on first use. */
 export function warmBackend(): void {
   fetch(`${API_BASE}/health`).catch(() => {});
+  fetch(`${VSR_BASE}/health`).catch(() => {});
 }
 
-/** Whether this deployment can run the lip-reading model (false on serverless). */
+/** Whether the vsr_lip_reader service can run the lip-reading model. */
 export async function vsrAvailable(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/health`);
+    const res = await fetch(`${VSR_BASE}/health`);
     if (!res.ok) return true;
     return (await res.json()).vsr_available !== false;
   } catch {

@@ -18,10 +18,15 @@ webcam ─▶ short mp4 clip ─▶ vsr (Auto-AVSR lip-reading)
                                         ▼
                 on-screen text + steps trace  +  optional TTS voice clone
 ```
-- API backend: `backend/` (FastAPI). Entry point `backend/app/main.py`.
-  Workshop endpoints: `/api/team_info`, `/api/agent_info`, `/api/model_architecture`,
-  `POST /api/execute` (text), `POST /api/execute_lips` (clip). The built SPA is
-  served at the root URL.
+- Three services:
+  1. **SPA** (`app/`) — static, on Vercel.
+  2. **API backend** (`backend/app/main.py`, FastAPI) — `/api/team_info`,
+     `/api/agent_info`, `/api/model_architecture`, `POST /api/execute`, TTS/voices.
+     No VSR/torch. On Vercel as a Python function (`api/index.py`, deps from
+     root `requirements.txt`; `.vercelignore` hides pyproject/uv.lock + VSR code).
+  3. **vsr_lip_reader service** (`backend/app/vsr_main.py`, FastAPI) —
+     `POST /api/execute_lips` + `/health` only (VSR → agent, GPU). On Modal
+     (`modal_app.py`), local dev port 8001 (launch config `chaplin-vsr`).
 - LangGraph agent: `backend/app/agent/` — `graph.py` (generate → reflect, max 1
   revision), `prompts.py` (all node prompts), `model.py` (ChatAnthropic + structured output).
 - React SPA: `app/`. The browser owns the camera (getUserMedia/MediaRecorder).

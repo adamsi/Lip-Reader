@@ -1,0 +1,11 @@
+# Dependencies for the Vercel-deployed API backend (api/index.py) ONLY.
+# Local dev uses uv + pyproject.toml; the GPU/VSR deps live in modal_app.py.
+fastapi
+pydantic
+python-dotenv
+python-multipart
+anthropic
+langgraph
+langchain-anthropic
+inworld-tts
+httpx

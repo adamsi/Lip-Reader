@@ -1,12 +1,28 @@
-# Vercel only builds/serves the SPA (app/); the backend runs on Modal.
+# Vercel hosts the SPA (app/) + the lightweight API backend (api/index.py ->
+# backend/app, no VSR). The GPU vsr_lip_reader service runs on Modal.
 .env
 app/.env
 .venv
 .claude
 .pytest_cache
 app/node_modules
-backend
+
+# Local/uv dependency manifests list torch etc. — Vercel must resolve deps
+# from requirements.txt instead, or the function blows the 500MB limit.
+pyproject.toml
+uv.lock
+
+# GPU/VSR code — lives in the Modal vsr_lip_reader service, never on Vercel.
+backend/espnet
+backend/pipelines
+backend/app/vsr_main.py
+backend/app/vsr.py
+backend/storage
+backend/e2e_check.py
+modal_app.py
 benchmarks
+
+# Not needed by the deployment.
 tests
 spec
 assets/sravi_test_videos
@@ -16,5 +32,3 @@ project_requierments.pdf
 plan-to-implement.md
 *.mp4
 *.mov
-pyproject.toml
-uv.lock

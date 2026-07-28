@@ -104,7 +104,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   // Talk — always starts a fresh utterance (and clears the previous sentence).
   async function record() {
     if (!vsrOk) {
-      setToast("Recording with the camera is available only locally - not on Vercel.");
+      setToast("The lip-reading service is unavailable right now - use Run Agent instead.");
       return;
     }
     stopAudio();
@@ -134,7 +134,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
       // explain themselves instead of showing a generic failure.
       if (!(await vsrAvailable())) {
         setVsrOk(false);
-        msg = "Lip-reading isn't available on this deployment - use the Run Agent button instead.";
+        msg = "The lip-reading service is unavailable right now - use the Run Agent button instead.";
       }
       setApiError(msg);
       setPhase("idle");

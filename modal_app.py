@@ -1,4 +1,9 @@
-"""Deploy the full Chaplin AI backend (FastAPI + VSR on GPU) to Modal.
+"""Deploy the Chaplin AI vsr_lip_reader service (FastAPI + VSR on GPU) to Modal.
+
+Only POST /api/execute_lips (+ /health) lives here; the rest of the API is the
+lightweight backend (backend/app/main.py) deployed on Vercel. The Modal app and
+function names are kept as `chaplin-ai` / `backend` so the public URL stays
+https://adamsi--chaplin-ai-backend.modal.run.
 
 One-time setup:
   uv run modal setup                                          # link account
@@ -33,12 +38,10 @@ image = (
         "torch==2.5.1",
         "torchvision==0.20.1",
         "torchaudio==2.5.1",
-        "transformers==4.44.2",
         "anthropic",
         "langgraph",
         "langchain-anthropic",
         "python-dotenv",
-        "inworld-tts",
         "fastapi",
         "uvicorn[standard]",
         "python-multipart",
@@ -86,6 +89,6 @@ def backend():
 
     os.chdir(REMOTE_ROOT)
     sys.path.insert(0, REMOTE_ROOT)
-    from backend.app.main import app as fastapi_app
+    from backend.app.vsr_main import app as fastapi_app
 
     return fastapi_app
