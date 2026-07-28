@@ -27,9 +27,12 @@ image = (
         "av>=10.0.0",
         "six>=1.16.0",
         "mediapipe==0.10.21",
-        "torch",
-        "torchvision",
-        "torchaudio",
+        # Pinned to a known-good stable CUDA build: local dev only ever runs
+        # torch CPU-only, so the GPU path here was never exercised before
+        # deploying — an unpinned "latest" torch risks a T4/driver mismatch.
+        "torch==2.5.1",
+        "torchvision==0.20.1",
+        "torchaudio==2.5.1",
         "transformers==4.44.2",
         "anthropic",
         "langgraph",
@@ -48,6 +51,10 @@ image = (
                 "https://chaplin-ai.vercel.app,"
                 "http://localhost:5173,http://localhost:4173"
             ),
+            # Surface a real Python/C++ traceback instead of a bare SIGABRT
+            # if a CUDA op fails on the T4.
+            "CUDA_LAUNCH_BLOCKING": "1",
+            "TORCH_SHOW_CPP_STACKTRACES": "1",
         }
     )
     # The INI weight paths (benchmarks/LRS3/...) are relative to the CWD.
