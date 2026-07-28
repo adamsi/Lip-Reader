@@ -1,4 +1,4 @@
-import { architectureUrl } from "../lib/api";
+import { API_BASE, architectureUrl } from "../lib/api";
 
 /** Logo + short explanation of the system, its architecture, and how to use it. */
 export default function AboutModal({ onClose }: { onClose: () => void }) {
@@ -73,6 +73,19 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
               API
             </div>
+            {API_BASE && (
+              <p className="mt-1 text-xs text-gray-500">
+                Base URL:{" "}
+                <a
+                  href={API_BASE}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono font-medium text-violet-600 hover:underline"
+                >
+                  {API_BASE}
+                </a>
+              </p>
+            )}
             <div className="mt-1.5 divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/60">
               <ApiRow method="GET" path="/api/team_info" text="student and team details" />
               <ApiRow method="GET" path="/api/agent_info" text="agent description, prompts, examples" />

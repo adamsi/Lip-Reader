@@ -5,6 +5,9 @@
 const API_BASE =
   import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
+// Exposed so the UI (About modal) can show where the API actually lives.
+export { API_BASE };
+
 export type Voice = { id: string; name: string; description?: string; gender?: string };
 
 // One traced LLM/VSR call of the agent workflow.
