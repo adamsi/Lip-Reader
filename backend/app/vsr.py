@@ -1,10 +1,4 @@
-"""VSR inference.
-
-Reuses the vendored Auto-AVSR pipeline (``backend/pipelines/``) — the model
-is not rewritten here. The heavy model is loaded lazily on first transcribe
-and kept as a singleton. Correction of the raw output is the job of the
-LangGraph agent (``backend/app/agent/``).
-"""
+"""VSR inference on top of the vendored Auto-AVSR pipeline (backend/pipelines/)."""
 from __future__ import annotations
 
 import logging
@@ -30,7 +24,6 @@ def _get_device():
 
 
 def get_model():
-    """Lazily load the Auto-AVSR InferencePipeline (thread-safe singleton)."""
     global _model
     if _model is None:
         with _model_lock:
@@ -50,16 +43,11 @@ def get_model():
 
 
 def transcribe_clip(video_path: str) -> str:
-    """Run lip-reading on an mp4 clip. Returns raw (all-caps) transcription.
-
-    Raises ``NoSpeechError`` when the model produced nothing usable and
-    ``NoFaceError`` when the face detector found no face to read.
-    """
+    """Returns the raw all-caps transcription; raises NoFaceError/NoSpeechError."""
     model = get_model()
     try:
         text = model(video_path)
-    except AssertionError as e:
-        # mediapipe raises AssertionError when it finds no face in the clip.
+    except AssertionError as e:  # mediapipe: no face found
         raise NoFaceError(str(e)) from e
     text = (text or "").strip()
     if not text:
@@ -68,8 +56,8 @@ def transcribe_clip(video_path: str) -> str:
 
 
 class NoFaceError(Exception):
-    """The face detector found no face in the clip."""
+    pass
 
 
 class NoSpeechError(Exception):
-    """The model produced no usable transcription."""
+    pass

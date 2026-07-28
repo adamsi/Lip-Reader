@@ -1,18 +1,4 @@
-"""Chaplin AI backend — stateless FastAPI service (no VSR).
-
-Workshop API (exact shapes required by the course PDF):
-  GET  /api/team_info           -> student details
-  GET  /api/agent_info          -> agent meta, prompt template + examples
-  GET  /api/model_architecture  -> architecture diagram (PNG)
-  POST /api/execute             { prompt } -> { status, error, response, steps }
-
-Supporting endpoints (unchanged): /health, /voices, /voice/*, /speak.
-The built SPA (app/dist) is served at the root URL when present.
-
-Lip-reading (POST /api/execute_lips) lives in the separate vsr_lip_reader
-service (``backend/app/vsr_main.py``), deployed on Modal with a GPU — this
-service has no torch/VSR dependency so it can run on Vercel serverless.
-"""
+"""Chaplin AI API backend. Lip reading is served separately by vsr_main.py."""
 from __future__ import annotations
 
 import base64
@@ -35,7 +21,6 @@ app = FastAPI(title="Chaplin AI", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,
-    # Allow any localhost port (Vite may use 5174+ if 5173 is taken).
     allow_origin_regex=r"^https?://localhost(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
@@ -79,7 +64,6 @@ class ExecuteBody(BaseModel):
 
 @app.post("/api/execute")
 def execute(body: ExecuteBody):
-    """Text prompt (a raw/noisy transcription) -> corrected sentence + steps."""
     text = (body.prompt or "").strip()
     if not text:
         return _err("prompt is required")
@@ -100,8 +84,6 @@ class SpeakBody(BaseModel):
 
 @app.get("/health")
 def health():
-    # This service never runs the VSR model — the SPA asks the vsr_lip_reader
-    # service's /health for lip-reading availability.
     return {"status": "ok", "vsr_available": False}
 
 
@@ -121,13 +103,11 @@ def speak(body: SpeakBody):
     except Exception as e:  # noqa: BLE001
         log.exception("speak failed")
         raise HTTPException(status_code=500, detail=f"tts failed: {e}")
-    # JSON so we can ship the per-word timestamps alongside the audio.
     return {"audio": base64.b64encode(audio).decode(), "mime": "audio/mpeg", "tokens": tokens}
 
 
 @app.post("/voice/enroll")
 def voice_enroll(file: UploadFile = File(...)):
-    """mp4 voice sample -> clone an Inworld voice; the client stores the id."""
     data = file.file.read()
     if not data:
         raise HTTPException(status_code=400, detail="empty voice sample")
@@ -147,15 +127,12 @@ class SelectVoiceBody(BaseModel):
 
 @app.post("/voice/select")
 def voice_select(body: SelectVoiceBody):
-    """Validate a voice from the Inworld catalog; the client stores the id."""
     if not tts.is_valid_voice(body.voice_id):
         raise HTTPException(status_code=400, detail="unknown voice")
     return {"voice_id": body.voice_id, "voice_source": "preset"}
 
 
-# --- SPA at the root URL ----------------------------------------------------
-# Mounted last: explicit routes above always win; everything else serves the
-# built React app (GUI requirement: available on the root url, no auth).
+# Mounted last so the explicit routes above win.
 if SPA_DIST.is_dir():
     app.mount("/", StaticFiles(directory=SPA_DIST, html=True), name="spa")
 else:

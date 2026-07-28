@@ -1,11 +1,4 @@
-// Thin client for the Chaplin AI services. No auth — the API is open.
-//
-// Two backends:
-//  - API backend (team/agent info, /api/execute, TTS/voices) — deployed on
-//    Vercel next to this SPA, so relative URLs work in production. In dev it
-//    runs locally on :8000.
-//  - vsr_lip_reader service (/api/execute_lips + /health) — GPU-heavy, on
-//    Modal. In dev it runs locally on :8001 (launch config "chaplin-vsr").
+// API backend (Vercel, :8000 in dev) + vsr_lip_reader service (Modal, :8001 in dev).
 
 const API_BASE =
   import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:8000" : "");
@@ -16,12 +9,10 @@ const VSR_BASE =
     ? "http://localhost:8001"
     : "https://adamsi--chaplin-ai-backend.modal.run");
 
-// Exposed so the UI (About modal) can show where each service actually lives.
 export { API_BASE, VSR_BASE };
 
 export type Voice = { id: string; name: string; description?: string; gender?: string };
 
-// One traced LLM/VSR call of the agent workflow.
 export type Step = {
   module: string;
   prompt: Record<string, unknown>;
@@ -44,7 +35,6 @@ function unwrap(data: ExecuteEnvelope): ExecuteResult {
   return { response: data.response, steps: data.steps || [] };
 }
 
-/** Text prompt -> corrected sentence + full steps trace. */
 export async function executeText(prompt: string): Promise<ExecuteResult> {
   const res = await fetch(`${API_BASE}/api/execute`, {
     method: "POST",
@@ -55,7 +45,6 @@ export async function executeText(prompt: string): Promise<ExecuteResult> {
   return unwrap(await res.json());
 }
 
-/** Webcam clip -> VSR -> agent -> corrected sentence + steps trace. */
 export async function executeLips(clip: Blob): Promise<ExecuteResult> {
   const form = new FormData();
   const ext = clip.type.includes("webm") ? "webm" : "mp4";
@@ -64,7 +53,6 @@ export async function executeLips(clip: Blob): Promise<ExecuteResult> {
     method: "POST",
     body: form,
   });
-  // Serverless edges reject large uploads before they reach the backend.
   if (res.status === 413) {
     throw new Error("Recording too large to upload on this deployment - use Run Agent instead.");
   }
@@ -72,14 +60,12 @@ export async function executeLips(clip: Blob): Promise<ExecuteResult> {
   return unwrap(await res.json());
 }
 
-/** Fire-and-forget pings so cold starts (Modal container boot + VSR model
- * load) begin the moment the page loads, not on first use. */
+// fire-and-forget pings so cold starts begin on page load
 export function warmBackend(): void {
   fetch(`${API_BASE}/health`).catch(() => {});
   fetch(`${VSR_BASE}/health`).catch(() => {});
 }
 
-/** Whether the vsr_lip_reader service can run the lip-reading model. */
 export async function vsrAvailable(): Promise<boolean> {
   try {
     const res = await fetch(`${VSR_BASE}/health`);
@@ -98,7 +84,6 @@ export async function getVoices(): Promise<Voice[]> {
   return (await res.json()).voices;
 }
 
-/** Validates the voice against the catalog on the backend. */
 export async function selectVoice(voiceId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/voice/select`, {
     method: "POST",
@@ -108,7 +93,6 @@ export async function selectVoice(voiceId: string): Promise<void> {
   if (!res.ok) throw new Error(`/voice/select failed: ${res.status}`);
 }
 
-/** Clones a voice from the sample; returns the new voice id to store locally. */
 export async function enrollVoice(clip: Blob): Promise<string> {
   const form = new FormData();
   form.append("file", clip, "voice.mp4");
@@ -120,8 +104,6 @@ export async function enrollVoice(clip: Blob): Promise<string> {
   return (await res.json()).voice_id;
 }
 
-// A token of spoken text with the audio time (seconds) at which it begins —
-// used to draw the sentence in sync with playback.
 export type SpokenToken = { t: string; start: number };
 
 export async function speak(

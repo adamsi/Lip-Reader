@@ -1,21 +1,13 @@
-"""Deploy the Chaplin AI vsr_lip_reader service (FastAPI + VSR on GPU) to Modal.
+"""Deploy the vsr_lip_reader service to Modal.
 
-Only POST /api/execute_lips (+ /health) lives here; the rest of the API is the
-lightweight backend (backend/app/main.py) deployed on Vercel. The Modal app and
-function names are kept as `chaplin-ai` / `backend` so the public URL stays
-https://adamsi--chaplin-ai-backend.modal.run.
-
-One-time setup:
-  uv run modal setup                                          # link account
+Setup:
+  uv run modal setup
   uv run modal volume create chaplin-weights
   uv run modal volume put chaplin-weights benchmarks/LRS3 /LRS3
-  # In the Modal dashboard, create a secret named `chaplin-secrets` with
-  # ANTHROPIC_API_KEY (and optionally INWORLD_API_KEY / INWORLD_VOICE_ID).
+  # Modal secret `chaplin-secrets`: ANTHROPIC_API_KEY
 
-Deploy (repeat after backend changes):
+Deploy:
   uv run modal deploy modal_app.py
-
-Then set VITE_API_BASE on Vercel to the printed .modal.run URL.
 """
 import modal
 
@@ -23,7 +15,6 @@ REMOTE_ROOT = "/root/chaplin"
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    # ffmpeg for clip normalization; libgl/libglib for opencv + mediapipe.
     .apt_install("ffmpeg", "libgl1", "libglib2.0-0")
     .pip_install(
         "opencv-python>=4.5.5.62",
@@ -32,9 +23,6 @@ image = (
         "av>=10.0.0",
         "six>=1.16.0",
         "mediapipe==0.10.21",
-        # Pinned to a known-good stable CUDA build: local dev only ever runs
-        # torch CPU-only, so the GPU path here was never exercised before
-        # deploying — an unpinned "latest" torch risks a T4/driver mismatch.
         "torch==2.5.1",
         "torchvision==0.20.1",
         "torchaudio==2.5.1",
@@ -54,13 +42,10 @@ image = (
                 "https://chaplin-ai.vercel.app,"
                 "http://localhost:5173,http://localhost:4173"
             ),
-            # Surface a real Python/C++ traceback instead of a bare SIGABRT
-            # if a CUDA op fails on the T4.
             "CUDA_LAUNCH_BLOCKING": "1",
             "TORCH_SHOW_CPP_STACKTRACES": "1",
         }
     )
-    # The INI weight paths (benchmarks/LRS3/...) are relative to the CWD.
     .workdir(REMOTE_ROOT)
     .add_local_dir("backend", remote_path=f"{REMOTE_ROOT}/backend",
                    ignore=["**/__pycache__", "storage"])
@@ -75,7 +60,6 @@ app = modal.App("chaplin-ai")
 @app.function(
     image=image,
     gpu="T4",
-    # Volume holds /LRS3, so mounting at ./benchmarks yields benchmarks/LRS3.
     volumes={f"{REMOTE_ROOT}/benchmarks": weights},
     secrets=[modal.Secret.from_name("chaplin-secrets")],
     timeout=600,

@@ -1,6 +1,5 @@
 import { API_BASE, VSR_BASE, architectureUrl } from "../lib/api";
 
-/** Logo + short explanation of the system, its architecture, and how to use it. */
 export default function AboutModal({ onClose }: { onClose: () => void }) {
   return (
     <div

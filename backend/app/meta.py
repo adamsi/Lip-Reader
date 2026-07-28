@@ -10,7 +10,6 @@ TEAM_INFO = {
     ],
 }
 
-# A real recorded run of the agent (see /api/execute) used as the example.
 _EXAMPLE_PROMPT = "THANK YOU DARLING YOU ARE JUST TOO KIND TODAY"
 _EXAMPLE_RESPONSE = "Thank you, darling, you are just too kind today."
 _EXAMPLE_STEPS = [

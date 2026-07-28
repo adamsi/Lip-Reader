@@ -1,9 +1,4 @@
-"""Reflection agent: generate -> reflect -> (revise once | return).
-
-Every LLM call appends a {module, prompt, response} step to the state so the
-API can return the full trace; module names match the architecture diagram.
-Worst case 3 LLM calls: generate, reflect, one revision.
-"""
+"""Reflection agent: generate -> reflect -> (revise once | return)."""
 import operator
 from typing import Annotated, TypedDict
 
@@ -60,7 +55,6 @@ def reflect(state: State) -> dict:
 
 
 def after_generate(state: State) -> str:
-    # The single revision is final: skip a second review round.
     return END if state["generations"] > 1 else "reflect"
 
 
@@ -78,7 +72,6 @@ agent = builder.compile()
 
 
 def run_agent(raw_text: str) -> dict:
-    """Correct one utterance. Returns {"response": str, "steps": [...]}."""
     final = agent.invoke({"raw_text": raw_text, "feedback": "", "generations": 0, "steps": []})
     text = final["corrected"].strip()
     if text and text[-1] not in ".?!":

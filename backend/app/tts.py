@@ -1,9 +1,4 @@
-"""Inworld TTS: speak text in a voice, and enroll (clone) a new voice.
-
-Voice enrollment takes an mp4 sample, extracts its audio to an in-memory WAV
-(PyAV), and clones a voice. The clip itself is never persisted by this module;
-the caller decides whether to keep the sample on disk.
-"""
+"""Inworld TTS: speak text in a voice, and enroll (clone) a new voice."""
 from __future__ import annotations
 
 import io
@@ -15,8 +10,7 @@ from . import config
 
 log = logging.getLogger("chaplin.tts")
 
-# Safe fallback if the Inworld voice catalog can't be fetched, so the
-# onboarding list still renders. "Ashley" is a known-good stock EN_US voice.
+# fallback if the Inworld voice catalog can't be fetched
 FALLBACK_VOICES = [
     {"id": "Ashley", "name": "Ashley", "description": "Warm, friendly female voice.", "gender": "female"},
     {"id": "Mark", "name": "Mark", "description": "Clear, neutral male voice.", "gender": "male"},

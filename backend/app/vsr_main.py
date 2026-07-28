@@ -1,15 +1,4 @@
-"""Chaplin AI vsr_lip_reader service — stateless FastAPI app.
-
-The GPU-heavy half of the system, deployed on Modal (see modal_app.py):
-  POST /api/execute_lips   mp4/webm clip -> VSR -> agent -> { status, error, response, steps }
-  GET  /health             -> { status, vsr_available }
-
-Everything else (team/agent info, /api/execute, TTS, voices) lives in the
-lightweight API service (``backend/app/main.py``) deployed on Vercel.
-
-Privacy: uploaded clips are processed in a temp file and DELETED in a finally
-block immediately after inference. Video is never persisted; only text leaves.
-"""
+"""Chaplin AI vsr_lip_reader service: POST /api/execute_lips (clip -> VSR -> agent)."""
 from __future__ import annotations
 
 import logging
@@ -31,9 +20,7 @@ log = logging.getLogger("chaplin.vsr_api")
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    # Warm the VSR model in the background at startup (instead of lazily on
-    # the first request) so the first clip doesn't pay the model-load time.
-    # get_model() is a locked singleton, so a concurrent request just waits.
+    # warm the VSR model at startup so the first clip doesn't pay the load time
     if not config.DISABLE_VSR:
         threading.Thread(target=vsr.get_model, daemon=True).start()
     yield
@@ -43,7 +30,6 @@ app = FastAPI(title="Chaplin AI - VSR lip reader", version="2.0.0", lifespan=_li
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,
-    # Allow any localhost port (Vite may use 5174+ if 5173 is taken).
     allow_origin_regex=r"^https?://localhost(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
@@ -52,13 +38,7 @@ app.add_middleware(
 
 
 def _normalize_clip(src: str) -> str:
-    """Re-encode a browser clip to 16fps h264 mp4 before inference.
-
-    Browser MediaRecorder clips are ~30fps VP9 webm; the VSR pipeline's cost
-    scales superlinearly with frame count, so normalizing to 16fps (what the
-    legacy desktop app recorded) keeps latency at desktop levels. Returns the
-    new path, or ``src`` unchanged if ffmpeg is unavailable/fails.
-    """
+    """Re-encode a browser clip to 16fps h264 mp4; VSR cost scales with frame count."""
     dst = src + ".norm.mp4"
     try:
         proc = subprocess.run(
@@ -86,14 +66,11 @@ def _err(message: str) -> dict:
 
 @app.get("/health")
 def health():
-    # vsr_available lets the SPA disable the Talk flow when this service
-    # can't run the model, instead of uploading a clip that can only fail.
     return {"status": "ok", "vsr_available": not config.DISABLE_VSR}
 
 
 @app.post("/api/execute_lips")
 def execute_lips(file: UploadFile = File(...)):
-    """mp4/webm clip -> VSR -> agent. The clip is deleted in `finally`."""
     if config.DISABLE_VSR:
         return _err(
             "Lip-reading is not available on this deployment (the VSR model "
@@ -126,7 +103,7 @@ def execute_lips(file: UploadFile = File(...)):
         log.exception("execute_lips failed")
         return _err(f"lip-reading failed: {e}")
     finally:
-        # PRIVACY: never persist video — delete the clip(s) immediately.
+        # privacy: never persist video
         for p in {path, norm_path}:
             if os.path.exists(p):
                 os.remove(p)

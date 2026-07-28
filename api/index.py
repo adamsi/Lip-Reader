@@ -1,10 +1,4 @@
-"""Vercel serverless entry point for the Chaplin AI API backend.
-
-Vercel routes every backend path here (see vercel.json rewrites); the ASGI
-app receives the original request path, so the FastAPI routes in
-backend/app/main.py work unchanged. The VSR-heavy /api/execute_lips endpoint
-is NOT here — it lives in the vsr_lip_reader service on Modal.
-"""
+"""Vercel serverless entry point for the API backend (see vercel.json rewrites)."""
 import os
 import sys
 

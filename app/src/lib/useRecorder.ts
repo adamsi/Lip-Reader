@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Pick the best container the browser can actually record. Safari records
-// mp4; Chrome/Firefox fall back to webm. The backend accepts both.
+// Safari records mp4; Chrome/Firefox fall back to webm
 function pickMimeType(): string {
   const candidates = [
     "video/mp4",
@@ -27,7 +26,6 @@ export function useRecorder() {
   const chunksRef = useRef<Blob[]>([]);
   const videoElRef = useRef<HTMLVideoElement | null>(null);
 
-  // Attach the live camera preview to a <video> element.
   const attachPreview = useCallback((el: HTMLVideoElement | null) => {
     videoElRef.current = el;
     if (el && streamRef.current) {
@@ -69,7 +67,6 @@ export function useRecorder() {
     }
   }, [ensureStream]);
 
-  // Stop recording and resolve with the finished clip Blob.
   const stop = useCallback(async (): Promise<Blob | null> => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === "inactive") {
@@ -88,7 +85,6 @@ export function useRecorder() {
     });
   }, []);
 
-  // Turn the camera/mic off (releases the hardware light immediately).
   const stopCamera = useCallback(() => {
     recorderRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -98,7 +94,6 @@ export function useRecorder() {
     setError(null);
   }, []);
 
-  // Release the camera/mic when the component using the hook unmounts.
   useEffect(() => {
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());

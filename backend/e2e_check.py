@@ -1,21 +1,4 @@
-"""End-to-end check for the Chaplin AI services.
-
-Exercises the real request path against both FastAPI apps in-process
-(FastAPI TestClient), printing PASS/FAIL per stage:
-
-  API backend (backend/app/main.py — Vercel in production):
-    GET  /api/team_info
-    GET  /api/agent_info
-    GET  /api/model_architecture
-    POST /api/execute        (text prompt -> agent)
-    POST /speak
-
-  vsr_lip_reader service (backend/app/vsr_main.py — Modal in production):
-    POST /api/execute_lips   (clip -> VSR -> agent)
-
-It captures a short webcam clip when a camera is available; otherwise it
-falls back to a synthetic clip so the full plumbing (temp-file handling,
-the privacy delete-in-finally, error handling) is still verified.
+"""End-to-end check for both FastAPI apps (in-process TestClient), PASS/FAIL per stage.
 
 Run:  uv run python backend/e2e_check.py
 """
@@ -26,7 +9,6 @@ import sys
 import tempfile
 import time
 
-# Bootstrap repo-root import path + env.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.app import config  # noqa: E402
 
@@ -40,7 +22,6 @@ def step(msg: str) -> None:
 
 
 def make_clip() -> tuple[str, str]:
-    """Return (path, kind) where kind is 'webcam' or 'synthetic'."""
     import cv2
     import numpy as np
 
@@ -65,7 +46,6 @@ def make_clip() -> tuple[str, str]:
             return path, "webcam"
     cap.release()
 
-    # No camera here — synthesize a clip so the path is still exercised.
     writer = cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*"mp4v"), FPS, (256, 256), True)
     for _ in range(FPS * 2):
         writer.write(np.zeros((256, 256, 3), np.uint8))
@@ -137,7 +117,6 @@ def main() -> int:
     print(f"prompt   : {EXECUTE_PROMPT!r}")
     print(f"response : {body.get('response')!r}")
     print(f"steps    : {[s['module'] for s in body.get('steps', [])]}")
-    # error shape check (no LLM call)
     r = client.post("/api/execute", json={"prompt": ""})
     err = r.json()
     if not (err.get("status") == "error" and err.get("response") is None and err.get("steps") == []):
@@ -166,8 +145,7 @@ def main() -> int:
             print(f"steps    : {[s['module'] for s in steps]}")
             speak_text = body.get("response") or speak_text
         else:
-            # No face / no speech -> the error shape is the correct outcome
-            # (synthetic clips always; webcam clips when nobody is speaking).
+            # no face / no speech -> the error shape is the correct outcome
             shape_ok = body.get("response") is None and body.get("steps") == [] and body.get("error")
             ok["execute_lips"] = bool(shape_ok)
             print(f"error    : {body.get('error')!r} (valid error shape - no face/speech in clip)")

@@ -1,4 +1,3 @@
-// Clean, minimal spinner. `light` for use on dark/overlay backgrounds.
 export default function Spinner({
   size = 20,
   light = false,

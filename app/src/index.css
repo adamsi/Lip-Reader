@@ -14,11 +14,8 @@ body {
   background: #fcfcfd;
   color: #101828;
   -webkit-font-smoothing: antialiased;
-  /* Full-bleed (TalkScreen's camera fills the viewport); individual screens
-     apply env(safe-area-inset-*) where their chrome needs it. */
 }
 
-/* "Appears on screen" entrance for the result text + Speak button. */
 @keyframes popIn {
   from {
     opacity: 0;
@@ -33,8 +30,6 @@ body {
   animation: popIn 0.28s ease-out both;
 }
 
-/* Staggered "streams onto the screen" entrance for the landing copy.
-   Each element sets its own animation-delay inline. */
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -49,7 +44,6 @@ body {
   animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Slow ambient drift for the background color glows on the landing page. */
 @keyframes floatSlow {
   0%,
   100% {
@@ -63,7 +57,6 @@ body {
   animation: floatSlow 9s ease-in-out infinite;
 }
 
-/* Soft pulsing glow behind the logo on the landing page. */
 @keyframes glowPulse {
   0%,
   100% {

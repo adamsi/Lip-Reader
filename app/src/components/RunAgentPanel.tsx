@@ -3,7 +3,6 @@ import { executeText, ExecuteResult } from "../lib/api";
 import Spinner from "./Spinner";
 import StepsTrace from "./StepsTrace";
 
-// Deliberately incorrect, VSR-style (all-caps) sentences the agent corrects.
 const PRESETS = [
   "IM SO EXCITED TO ME YOU TODAY",
   "PLEASE BRING ME A GLASS OF WHAT ER",
@@ -13,7 +12,6 @@ const PRESETS = [
   "THANK YOU DARLING YOU ARE JUST TOO KIND TO DAY",
 ];
 
-/** Text entry point to the agent: presets dropdown + free text -> /api/execute. */
 export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
   const [prompt, setPrompt] = useState("");
   const [running, setRunning] = useState(false);

@@ -1,12 +1,6 @@
-"""Prompts for the reflection agent nodes.
-
-Kept deliberately short: the workshop budget rewards a minimal context size,
-and the inputs are single spoken sentences, not documents.
-"""
+"""Prompts for the reflection agent nodes."""
 
 # --- generate -------------------------------------------------------------
-# Enhanced version of the original Chaplin correction prompt, with few-shot
-# examples of typical lip-reading confusions (visually similar phonemes).
 GENERATE_SYSTEM_PROMPT = (
     "You correct the output of a lip-reading (visual speech recognition) model. "
     "The input is an imperfect ALL-CAPS transcription of one spoken utterance; "
@@ -29,7 +23,6 @@ GENERATE_SYSTEM_PROMPT = (
 )
 
 # --- reflect ----------------------------------------------------------------
-# The critic: approves unless there is a concrete problem worth one revision.
 REFLECT_SYSTEM_PROMPT = (
     "You review a correction of a lip-read transcription. Decide if the "
     "correction is a natural, faithful English sentence.\n\n"

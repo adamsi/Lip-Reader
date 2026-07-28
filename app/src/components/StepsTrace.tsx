@@ -1,6 +1,5 @@
 import { Step } from "../lib/api";
 
-// Per-module accent colors — names match the architecture diagram.
 const MODULE_COLOR: Record<string, string> = {
   vsr: "bg-amber-100 text-amber-700 border-amber-300",
   generate: "bg-violet-100 text-violet-700 border-violet-300",
@@ -19,7 +18,6 @@ function Field({ label, value }: { label: string; value: unknown }) {
   );
 }
 
-/** The full agent execution trace: one collapsible card per step. */
 export default function StepsTrace({ steps }: { steps: Step[] }) {
   if (!steps.length) return null;
   return (

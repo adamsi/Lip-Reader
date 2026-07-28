@@ -7,24 +7,19 @@ import RunAgentPanel from "./RunAgentPanel";
 import Spinner from "./Spinner";
 import StepsTrace from "./StepsTrace";
 
-// Simple communication-turn loop:
-//   idle ── Talk ──▶ recording ── Stop ──▶ thinking ──▶ review
-//   review: shows the sentence + [Speak] (voice it) and [Talk] (start over)
-//   review ── Speak ──▶ speaking (words draw in sync) ── ends/Stop ──▶ review
-// The sentence stays on screen until Talk is pressed.
 type Phase = "idle" | "recording" | "thinking" | "review" | "speaking";
 
 export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => void }) {
   const { error, start, stop, attachPreview, startCamera, stopCamera } = useRecorder();
   const [phase, setPhase] = useState<Phase>("idle");
-  const [cameraOn, setCameraOn] = useState(false); // camera is opt-in, default off
+  const [cameraOn, setCameraOn] = useState(false);
   const [text, setText] = useState("");
   const [tokens, setTokens] = useState<SpokenToken[]>([]);
-  const [spoken, setSpoken] = useState(0); // count of tokens revealed so far
-  const [preparing, setPreparing] = useState(false); // fetching audio
+  const [spoken, setSpoken] = useState(0);
+  const [preparing, setPreparing] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [steps, setSteps] = useState<Step[]>([]); // trace of the last lip-read run
+  const [steps, setSteps] = useState<Step[]>([]);
   const [showAgent, setShowAgent] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
@@ -33,13 +28,11 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   const audioUrlRef = useRef<string | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  // Serverless deployments can't run the VSR model; gate Talk up-front.
   const [vsrOk, setVsrOk] = useState(true);
   useEffect(() => {
     vsrAvailable().then(setVsrOk);
   }, []);
 
-  // Transient toast notification (auto-dismisses).
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
     if (!toast) return;
@@ -47,7 +40,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     return () => clearTimeout(id);
   }, [toast]);
 
-  // Camera follows the toggle: live preview while on, released when off.
   useEffect(() => {
     if (cameraOn) {
       attachPreview(videoRef.current);
@@ -58,8 +50,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     } else {
       stopCamera();
       stopAudio();
-      // Clear the utterance but keep apiError — it may explain why the
-      // camera just turned itself off (e.g. permission denied).
+      // keep apiError - it may explain why the camera turned off
       setText("");
       setTokens([]);
       setSpoken(0);
@@ -69,9 +60,8 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cameraOn]);
 
-  useEffect(() => () => stopAudio(), []); // release audio on unmount
+  useEffect(() => () => stopAudio(), []);
 
-  // Elapsed-time counter shown in the "Listening" status pill.
   useEffect(() => {
     if (phase !== "recording") return;
     setRecSeconds(0);
@@ -101,7 +91,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     setApiError(null);
   }
 
-  // Talk — always starts a fresh utterance (and clears the previous sentence).
   async function record() {
     if (!vsrOk) {
       setToast("The lip-reading service is unavailable right now - use Run Agent instead.");
@@ -121,17 +110,13 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
       const result = await executeLips(clip);
       setText(result.response);
       setSteps(result.steps);
-      setPhase("review"); // show the sentence; the human confirms before voicing
+      setPhase("review");
     } catch (e) {
-      // The backend's error envelope is human-readable (no face / no speech /
-      // VSR unavailable) — show it as-is; hide only raw fetch failures.
       let msg =
         e instanceof Error && e.message && !e.message.startsWith("/api/")
           ? e.message
           : "Something went wrong. Tap Talk to try again.";
-      // Cold-start race: the mount-time health check may not have resolved
-      // before the user tapped Talk. Re-check so serverless deploys always
-      // explain themselves instead of showing a generic failure.
+      // re-check in case the mount-time health check had not resolved yet
       if (!(await vsrAvailable())) {
         setVsrOk(false);
         msg = "The lip-reading service is unavailable right now - use the Run Agent button instead.";
@@ -141,7 +126,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     }
   }
 
-  // Word-by-word reveal driven by the audio clock.
+  // word-by-word reveal driven by the audio clock
   function startTick(audio: HTMLAudioElement, tk: SpokenToken[]) {
     const tick = () => {
       let n = 0;
@@ -152,8 +137,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     rafRef.current = requestAnimationFrame(tick);
   }
 
-  // Speak — voice the sentence aloud (always from the beginning). The audio is
-  // cached, so tapping Speak again just replays it without re-fetching.
   async function speakNow() {
     const existing = audioRef.current;
     if (existing) {
@@ -179,7 +162,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
       audio.onended = () => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setSpoken(tk.length);
-        setPhase("review"); // back to the sentence; Speak can repeat it
+        setPhase("review");
       };
       await audio.play();
     } catch {
@@ -188,7 +171,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     }
   }
 
-  // Stop — interrupt playback and return to the sentence.
   function interrupt() {
     audioRef.current?.pause();
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -207,9 +189,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         cameraOn ? "bg-black" : "bg-gradient-to-br from-indigo-50 via-white to-violet-100"
       }`}
     >
-      {/* Full-screen camera (only while the toggle is on). `-scale-x-100`
-          un-mirrors the front-camera preview so it shows the true orientation.
-          Display only — the recorded clip sent to the model is unaffected. */}
+      {/* -scale-x-100 un-mirrors the front-camera preview (display only) */}
       {cameraOn && (
         <video
           ref={videoRef}
@@ -220,8 +200,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         />
       )}
 
-      {/* Camera off: colorful landing — soft ambient glows + hero + a pipeline
-          of chips that mirrors the vsr -> generate/reflect -> speak flow. */}
       {!cameraOn && (
         <>
           <div className="animate-float-slow pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-violet-200/50 blur-3xl" />
@@ -230,7 +208,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
             style={{ animationDelay: "-4s" }}
           />
 
-          {/* The copy streams onto the screen line by line (staggered fade-up). */}
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto px-5 pt-32 pb-10 text-center sm:gap-4 sm:px-6 sm:py-16">
             <div className="relative">
               <div className="animate-glow-pulse absolute inset-0 rounded-full bg-violet-400/40 blur-2xl" />
@@ -255,7 +232,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
               A communication agent for non-vocal, ventilated patients.
             </p>
 
-            {/* Pipeline of chips — one per stage, connected by a line. */}
             <div className="relative mt-3 w-full max-w-lg text-left">
               <div className="pointer-events-none absolute bottom-6 left-[22px] top-6 w-0.5 bg-gradient-to-b from-violet-300 via-indigo-300 to-blue-300" />
               <div className="space-y-4">
@@ -266,7 +242,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
                   </p>
                 </TimelineChip>
                 <TimelineChip icon={<BoltIcon />} tone="indigo" delay="1.3s">
-                  {/* Streams in word by word. */}
                   <StreamWords
                     className="text-sm text-gray-700 sm:text-lg"
                     base={1.5}
@@ -277,7 +252,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
                   />
                 </TimelineChip>
                 <TimelineChip icon={<SpeakerIcon size={17} />} tone="blue" delay="2.35s">
-                  {/* Streams in word by word. */}
                   <StreamWords
                     className="text-sm text-gray-700 sm:text-lg"
                     base={2.55}
@@ -294,10 +268,9 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         </>
       )}
 
-      {/* Dim the camera while a sentence is on screen so the words pop. */}
+      {/* dim the camera while a sentence is on screen */}
       {showText && <div className="absolute inset-0 z-10 bg-black/45" />}
 
-      {/* Toast notification, top-center (auto-dismisses). */}
       {toast && (
         <div
           className="animate-pop fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-2.5 whitespace-nowrap rounded-full border border-amber-200 bg-white/95 px-4 py-2.5 shadow-[0_8px_28px_rgba(76,29,149,0.18)] backdrop-blur"
@@ -309,7 +282,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         </div>
       )}
 
-      {/* Control section, top-right: Run Agent (main), Settings, Info, Camera. */}
+      {/* control section, top-right */}
       <div
         className={`absolute right-2 z-30 flex flex-col rounded-2xl border border-white/70 bg-white/60 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-[0_8px_28px_rgba(76,29,149,0.15)] sm:right-4 sm:rounded-3xl ${
           cameraOn
@@ -342,7 +315,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           label="Settings"
           className="w-full"
         />
-        {/* Camera on/off — same capsule look, with an Apple-style switch. */}
         <div
           className={`flex w-full items-center justify-between gap-2 rounded-full border border-white/70 bg-white/85 font-semibold text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_4px_14px_rgba(76,29,149,0.12)] ${
             cameraOn
@@ -358,7 +330,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         </div>
       </div>
 
-      {/* Recording status pill, top-center. */}
       {phase === "recording" && (
         <div
           className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/55 px-3.5 py-1.5 backdrop-blur"
@@ -369,7 +340,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         </div>
       )}
 
-      {/* Thinking spinner, centered. */}
       {phase === "thinking" && (
         <div className="absolute inset-0 z-20 flex items-center justify-center">
           <div className="rounded-2xl bg-black/55 p-5 backdrop-blur">
@@ -378,7 +348,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         </div>
       )}
 
-      {/* The sentence — centered and prominent. Stays until Talk is pressed. */}
       {showText && (
         <div className="absolute inset-x-0 top-[16%] bottom-[34%] z-20 flex items-center justify-center overflow-y-auto px-6">
           <p className="animate-pop mx-auto max-w-lg text-center text-3xl font-semibold leading-snug text-white drop-shadow-lg">
@@ -393,8 +362,7 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         </div>
       )}
 
-      {/* Bottom controls — one centered, phone-width column (consistent on web,
-          full-width on mobile). One clear primary action per state. */}
+      {/* bottom controls */}
       <div
         className="absolute inset-x-0 bottom-0 z-30 px-5 pt-12"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
@@ -420,7 +388,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
 
           {phase === "review" && (
             <div className="flex flex-col items-center gap-3">
-              {/* Speak — the affirmative payoff (also "speak again" after it plays). */}
               <button
                 onClick={speakNow}
                 disabled={preparing}
@@ -432,7 +399,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
                   {preparing ? "Preparing…" : "Speak"}
                 </span>
               </button>
-              {/* Talk — start a new sentence (clears this one). */}
               <GlassButton className="w-full" onClick={record} variant="ghost" icon={<RecordDot />} label="Talk" />
             </div>
           )}
@@ -441,7 +407,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
             <GlassButton className="w-full" onClick={interrupt} variant="danger" icon={<StopIcon />} label="Stop" />
           )}
 
-          {/* How the sentence was produced — opens the agent steps trace. */}
           {phase === "review" && steps.length > 0 && (
             <button
               onClick={() => setShowTrace(true)}
@@ -478,9 +443,6 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   );
 }
 
-// iOS 26 "Liquid Glass" button: translucent frosted capsule with a heavy
-// backdrop blur + saturation, a bright specular top highlight, a thin light
-// rim, and an inner shadow for depth. The variant only changes the subtle tint.
 function GlassButton({
   onClick,
   disabled,
@@ -503,10 +465,8 @@ function GlassButton({
   className?: string;
 }) {
   const look = {
-    // Main action: violet -> indigo gradient (single hue family).
     primary:
       "border-white/40 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_8px_24px_rgba(109,40,217,0.35)]",
-    // Clean frosted-white capsule with dark text.
     ghost:
       "border-white/70 bg-white/85 text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_4px_14px_rgba(76,29,149,0.12)]",
     danger:
@@ -533,8 +493,6 @@ function GlassButton({
   );
 }
 
-// One node of the landing pipeline: an icon bubble + a chip card, connected
-// by the vertical line drawn behind the stack.
 const TONE: Record<string, string> = {
   violet: "bg-violet-100 text-violet-600",
   indigo: "bg-indigo-100 text-indigo-600",
@@ -566,7 +524,6 @@ function TimelineChip({
   );
 }
 
-// One landing sentence that streams onto the screen word by word.
 function StreamWords({
   segments,
   base,
@@ -597,7 +554,6 @@ function StreamWords({
   );
 }
 
-// Apple-style switch: green track when on, white knob sliding across.
 function Toggle({
   checked,
   onChange,
@@ -607,8 +563,6 @@ function Toggle({
   onChange: (v: boolean) => void;
   small?: boolean;
 }) {
-  // Track/knob scale down at the base breakpoint so the switch fits next to
-  // the "Camera" label inside the narrow mobile panel (no overlap).
   const track = small ? "h-5 w-9 sm:h-6 sm:w-10" : "h-6 w-10 sm:h-7 sm:w-12";
   const knob = small ? "h-4 w-4 sm:h-5 sm:w-5" : "h-5 w-5 sm:h-6 sm:w-6";
   const shift = small ? "translate-x-4" : "translate-x-4 sm:translate-x-5";
@@ -631,7 +585,7 @@ function Toggle({
   );
 }
 
-/* — inline icons (no icon dependency) — */
+/* inline icons */
 const RecordDot = () => <span className="h-3 w-3 rounded-full bg-red-500" />;
 const GearIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
