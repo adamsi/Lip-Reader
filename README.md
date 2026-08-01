@@ -6,10 +6,20 @@ a LangGraph reflection agent, shows one clean line of text, and — on **Speak**
 voices it back in the user's chosen voice. A **Run Agent** panel also accepts plain
 text input (presets or free text), so the agent can be exercised without a camera.
 
+A **Chat** lets the user hold a conversation with a second character: messages from
+the other person are typed in, predictions become the user's own messages, and the
+last 10 messages act as the agent's short-term memory. The first `generate` pass is
+deliberately **stateless** — only `reflect` (and the single revision pass) sees the
+conversation, so it can catch corrections that read well in isolation but are wrong
+in context (e.g. "Where's my bill?" → "Where's my pill?" after a nurse mentioned
+medication). Chats live in the browser (localStorage); only the text window is sent.
+
 ```
 webcam clip ─▶ vsr (Auto-AVSR) ─▶ generate ─▶ reflect ─▶ response + steps ─▶ GUI / TTS
-                                      ▲           │
-                                      └─ revise ──┘  (max 1 loop)
+                                      ▲           │  ▲
+                                      └─ revise ──┘  └── chat history (last 10)
+                                       (max 1 loop,
+                                        history + feedback)
 ```
 
 ## Architecture (monorepo)
@@ -32,14 +42,16 @@ block immediately after inference. Video is never persisted; only text leaves th
 | `GET  /api/team_info`        | student details                                                    |
 | `GET  /api/agent_info`       | agent description, purpose, prompt template + real examples        |
 | `GET  /api/model_architecture` | architecture diagram (PNG)                                       |
-| `POST /api/execute`          | `{ prompt }` → `{ status, error, response, steps }` (text → agent) |
-| `POST /api/execute_lips`     | mp4/webm clip → same shape (VSR → agent); steps start with `vsr`   |
+| `POST /api/execute`          | `{ prompt, conversation? }` → `{ status, error, response, steps }` (text → agent) |
+| `POST /api/execute_lips`     | mp4/webm clip (+ optional `conversation` form field) → same shape (VSR → agent); steps start with `vsr` |
 | `POST /speak`                | `{ text, voice_id }` → audio + word timestamps (Inworld TTS)       |
 | `GET  /voices` · `POST /voice/select` · `POST /voice/enroll` | voice catalog / selection / cloning |
 | `GET  /health`               | liveness                                                           |
 
 `steps` lists every model call in order as `{ module, prompt, response }`, with
 module names (`vsr`, `generate`, `reflect`) matching `assets/architecture.png`.
+`conversation` is an optional `[{ "role": "self"|"other", "content": "..." }]`
+history window (the client sends the active chat's last 10 messages).
 
 ## Prerequisites
 

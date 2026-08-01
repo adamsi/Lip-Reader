@@ -14,10 +14,15 @@ webcam ─▶ short mp4 clip ─▶ vsr (Auto-AVSR lip-reading)
                                         │
                                         ▼
               LangGraph reflection agent: generate ─▶ reflect ─▶ (revise once | return)
+                       (stateless)           ▲ chat history (last 10 msgs)
                                         │
                                         ▼
                 on-screen text + steps trace  +  optional TTS voice clone
 ```
+- Conversations (second character): chats live client-side (localStorage,
+  `app/src/lib/chat.ts`, sigma-agent-server-style repository + last-10 window).
+  `/api/execute` and `/api/execute_lips` take an optional `conversation` history;
+  the first generate pass never sees it — only reflect and the revision pass do.
 - Three services:
   1. **SPA** (`app/`) — static, on Vercel.
   2. **API backend** (`backend/app/main.py`, FastAPI) — `/api/team_info`,
