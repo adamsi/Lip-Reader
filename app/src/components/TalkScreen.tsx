@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { executeLips, speak, SpokenToken, Step, vsrAvailable } from "../lib/api";
+import { appendMessage, historyWindow } from "../lib/chat";
+import { useChat } from "../lib/chatContext";
 import { getStoredVoiceId } from "../lib/voice";
 import { useRecorder } from "../lib/useRecorder";
 import AboutModal from "./AboutModal";
+import ChatPanel from "./ChatPanel";
 import RunAgentPanel from "./RunAgentPanel";
 import Spinner from "./Spinner";
 import StepsTrace from "./StepsTrace";
@@ -23,6 +26,8 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
   const [showAgent, setShowAgent] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const { activeChatId, touch } = useChat();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -107,9 +112,15 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     const clip = await stop();
     if (!clip) return setPhase("idle");
     try {
-      const result = await executeLips(clip);
+      // capture the memory window BEFORE appending the new prediction
+      const history = activeChatId ? historyWindow(activeChatId) : undefined;
+      const result = await executeLips(clip, history);
       setText(result.response);
       setSteps(result.steps);
+      if (activeChatId) {
+        appendMessage(activeChatId, "self", result.response, result.steps);
+        touch();
+      }
       setPhase("review");
     } catch (e) {
       let msg =
@@ -301,6 +312,21 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
         />
         <GlassButton
           size={btnSize}
+          onClick={() => setShowChat(true)}
+          variant="ghost"
+          icon={
+            <span className="relative text-gray-500">
+              <ChatIcon />
+              {activeChatId && (
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-green-500" />
+              )}
+            </span>
+          }
+          label="Chat"
+          className="w-full"
+        />
+        <GlassButton
+          size={btnSize}
           onClick={() => setShowAbout(true)}
           variant="ghost"
           icon={<span className="text-gray-500"><InfoIcon /></span>}
@@ -420,6 +446,30 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
 
       {showAgent && <RunAgentPanel onClose={() => setShowAgent(false)} />}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showChat && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-gray-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+          <div className="animate-pop flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-white/60 bg-white/95 sm:rounded-3xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Chat</h2>
+                <p className="text-xs text-gray-500">
+                  Your lip-read sentences join the selected chat; add what the other person says.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowChat(false)}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="overflow-y-auto px-5 py-4">
+              <ChatPanel />
+            </div>
+          </div>
+        </div>
+      )}
       {showTrace && (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-gray-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-6">
           <div className="animate-pop flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-white/60 bg-white/95 sm:rounded-3xl">
@@ -591,6 +641,11 @@ const GearIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+const ChatIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
 const InfoIcon = () => (

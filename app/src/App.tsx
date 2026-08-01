@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Onboarding from "./components/Onboarding";
 import TalkScreen from "./components/TalkScreen";
+import { ChatProvider } from "./lib/chatContext";
 
 export default function App() {
   const [changingVoice, setChangingVoice] = useState(false);
@@ -15,5 +16,9 @@ export default function App() {
     );
   }
 
-  return <TalkScreen onChangeVoice={() => setChangingVoice(true)} />;
+  return (
+    <ChatProvider>
+      <TalkScreen onChangeVoice={() => setChangingVoice(true)} />
+    </ChatProvider>
+  );
 }

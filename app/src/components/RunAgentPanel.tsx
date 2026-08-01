@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { executeText, ExecuteResult } from "../lib/api";
+import { appendMessage, historyWindow } from "../lib/chat";
+import { useChat } from "../lib/chatContext";
+import ChatPanel from "./ChatPanel";
 import Spinner from "./Spinner";
 import StepsTrace from "./StepsTrace";
 
@@ -10,9 +13,13 @@ const PRESETS = [
   "I FILL A LOT OF PAIN IN MY BAG",
   "I WOULD LIKE TO SEA MY FAMILY TO MORROW",
   "THANK YOU DARLING YOU ARE JUST TOO KIND TO DAY",
+  // ambiguous alone - the reflect step fixes them from the chat context
+  "WHERES MY BILL",
+  "CAN YOU TURN UP THE HEAT",
 ];
 
 export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
+  const { activeChatId, touch } = useChat();
   const [prompt, setPrompt] = useState("");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ExecuteResult | null>(null);
@@ -24,7 +31,16 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
     setError(null);
     setResult(null);
     try {
-      setResult(await executeText(prompt.trim()));
+      // capture the memory window BEFORE appending the new prediction
+      const history = activeChatId ? historyWindow(activeChatId) : undefined;
+      const res = await executeText(prompt.trim(), history);
+      if (activeChatId) {
+        appendMessage(activeChatId, "self", res.response, res.steps);
+        touch();
+        setPrompt("");
+      } else {
+        setResult(res);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -56,6 +72,14 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
+          {/* conversation (second character) */}
+          <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Conversation
+          </label>
+          <div className="mb-4 mt-1.5">
+            <ChatPanel />
+          </div>
+
           {/* preset picker */}
           <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             Preset incorrect sentences
@@ -109,8 +133,8 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
             </p>
           )}
 
-          {/* final response */}
-          {result && (
+          {/* final response (no-chat mode; in a chat it appears as a bubble) */}
+          {result && !activeChatId && (
             <div className="mt-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Agent response

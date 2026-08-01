@@ -21,6 +21,9 @@ export type Step = {
 
 export type ExecuteResult = { response: string; steps: Step[] };
 
+// short-term memory window sent with agent requests (see lib/chat.ts)
+export type WireMessage = { role: "self" | "other"; content: string };
+
 type ExecuteEnvelope = {
   status: "ok" | "error";
   error: string | null;
@@ -35,20 +38,29 @@ function unwrap(data: ExecuteEnvelope): ExecuteResult {
   return { response: data.response, steps: data.steps || [] };
 }
 
-export async function executeText(prompt: string): Promise<ExecuteResult> {
+export async function executeText(
+  prompt: string,
+  conversation?: WireMessage[]
+): Promise<ExecuteResult> {
   const res = await fetch(`${API_BASE}/api/execute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify(
+      conversation?.length ? { prompt, conversation } : { prompt }
+    ),
   });
   if (!res.ok) throw new Error(`/api/execute failed: ${res.status}`);
   return unwrap(await res.json());
 }
 
-export async function executeLips(clip: Blob): Promise<ExecuteResult> {
+export async function executeLips(
+  clip: Blob,
+  conversation?: WireMessage[]
+): Promise<ExecuteResult> {
   const form = new FormData();
   const ext = clip.type.includes("webm") ? "webm" : "mp4";
   form.append("file", clip, `clip.${ext}`);
+  if (conversation?.length) form.append("conversation", JSON.stringify(conversation));
   const res = await fetch(`${VSR_BASE}/api/execute_lips`, {
     method: "POST",
     body: form,

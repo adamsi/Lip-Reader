@@ -36,8 +36,10 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
               A webcam clip is transcribed by the <Chip c="amber">vsr</Chip> model
               (Auto-AVSR). A LangGraph <em>reflection</em> agent then corrects the noisy
               transcription: <Chip c="violet">generate</Chip> proposes a corrected sentence
-              and <Chip c="sky">reflect</Chip> reviews it, requesting at most one revision,
-              before returning the final response with a full steps trace.
+              without seeing the chat, and <Chip c="sky">reflect</Chip> reviews it against
+              the conversation history — when a word doesn't fit the chat context it
+              requests one revision — before returning the final response with a full
+              steps trace.
             </p>
             <img
               src={architectureUrl}
@@ -59,6 +61,11 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
               <li>
                 <Chip c="violet">Run Agent</Chip> - type (or pick a preset) noisy
                 transcription as text; the agent corrects it and shows every step it took.
+              </li>
+              <li>
+                <Chip c="sky">Chat</Chip> - start or continue a conversation and add what
+                the other person says; your predictions join the chat, and the agent uses
+                the recent messages to fix words that don't fit the context.
               </li>
             </ul>
             <p className="mt-2.5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700">
