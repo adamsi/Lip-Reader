@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import logging
+from typing import Literal
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,8 +59,14 @@ def model_architecture():
     return FileResponse(ARCHITECTURE_PNG, media_type="image/png")
 
 
+class ConversationMessage(BaseModel):
+    role: Literal["self", "other"]
+    content: str
+
+
 class ExecuteBody(BaseModel):
     prompt: str = ""
+    conversation: list[ConversationMessage] = []
 
 
 @app.post("/api/execute")
@@ -68,7 +75,7 @@ def execute(body: ExecuteBody):
     if not text:
         return _err("prompt is required")
     try:
-        result = run_agent(text)
+        result = run_agent(text, [m.model_dump() for m in body.conversation])
     except Exception as e:  # noqa: BLE001
         log.exception("agent failed")
         return _err(f"agent failed: {e}")

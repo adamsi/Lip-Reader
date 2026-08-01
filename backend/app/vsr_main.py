@@ -1,6 +1,7 @@
 """Chaplin AI vsr_lip_reader service: POST /api/execute_lips (clip -> VSR -> agent)."""
 from __future__ import annotations
 
+import json
 import logging
 import os
 import subprocess
@@ -8,7 +9,7 @@ import tempfile
 import threading
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import config, vsr
@@ -64,13 +65,32 @@ def _err(message: str) -> dict:
     return {"status": "error", "error": message, "response": None, "steps": []}
 
 
+def _parse_conversation(raw: str | None) -> list[dict]:
+    """Lenient parse of the optional JSON conversation field; bad input -> no history."""
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return []
+    if not isinstance(data, list):
+        return []
+    return [
+        {"role": m["role"], "content": m["content"]}
+        for m in data
+        if isinstance(m, dict)
+        and m.get("role") in ("self", "other")
+        and isinstance(m.get("content"), str)
+    ]
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "vsr_available": not config.DISABLE_VSR}
 
 
 @app.post("/api/execute_lips")
-def execute_lips(file: UploadFile = File(...)):
+def execute_lips(file: UploadFile = File(...), conversation: str | None = Form(None)):
     if config.DISABLE_VSR:
         return _err(
             "Lip-reading is not available on this deployment (the VSR model "
@@ -97,7 +117,7 @@ def execute_lips(file: UploadFile = File(...)):
             "prompt": {"input": "<video clip>"},
             "response": {"raw_transcription": raw},
         }
-        result = run_agent(raw)
+        result = run_agent(raw, _parse_conversation(conversation))
         return _ok(result["response"], [vsr_step, *result["steps"]])
     except Exception as e:  # noqa: BLE001
         log.exception("execute_lips failed")
