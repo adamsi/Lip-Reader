@@ -27,7 +27,15 @@ _EXAMPLE_STEPS = [
             "system": REFLECT_SYSTEM_PROMPT,
             "input": f"Raw: {_EXAMPLE_PROMPT} | Correction: {_EXAMPLE_RESPONSE}",
         },
-        "response": {"verdict": "approve", "feedback": ""},
+        "response": {
+            "analysis": (
+                "The correction matches the raw transcription word for word, with "
+                "natural punctuation added (commas around \"darling\") and proper "
+                "capitalization. No conversation context to check against."
+            ),
+            "verdict": "approve",
+            "feedback": "",
+        },
     },
 ]
 
@@ -44,9 +52,15 @@ _CTX_TRANSCRIPT = (
     "Other: The nurse has your evening medication ready.\n"
     "You: Thank you, I was waiting for it."
 )
+_CTX_ANALYSIS = (
+    "The conversation is about evening medication being ready. Asking \"Where's "
+    "my bill?\" doesn't fit this context, but \"pill\" is visually very similar "
+    "to \"bill\" (p/b are classic lip-reading confusions) and \"Where's my "
+    "pill?\" fits perfectly."
+)
 _CTX_FEEDBACK = (
-    "'bill' clashes with the medical context; the visually similar 'pill' "
-    "fits the conversation about medication."
+    "'bill' should be 'pill' - p/b are visually identical on the lips, and the "
+    "conversation is about medication."
 )
 _CTX_STEPS = [
     {
@@ -60,7 +74,7 @@ _CTX_STEPS = [
             "system": REFLECT_SYSTEM_PROMPT,
             "input": f"{_CTX_TRANSCRIPT}\n\nRaw: {_CTX_PROMPT} | Correction: Where's my bill?",
         },
-        "response": {"verdict": "revise", "feedback": _CTX_FEEDBACK},
+        "response": {"analysis": _CTX_ANALYSIS, "verdict": "revise", "feedback": _CTX_FEEDBACK},
     },
     {
         "module": "generate",
