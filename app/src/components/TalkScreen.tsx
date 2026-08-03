@@ -113,12 +113,16 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
     if (!clip) return setPhase("idle");
     try {
       // capture the memory window BEFORE appending the new prediction
-      const history = activeChatId ? historyWindow(activeChatId) : undefined;
+      const history = activeChatId ? await historyWindow(activeChatId).catch(() => undefined) : undefined;
       const result = await executeLips(clip, history);
       setText(result.response);
       setSteps(result.steps);
       if (activeChatId) {
-        appendMessage(activeChatId, "self", result.response, result.steps);
+        try {
+          await appendMessage(activeChatId, "self", result.response, result.steps);
+        } catch {
+          setToast("Couldn't save the prediction to the chat.");
+        }
         touch();
       }
       setPhase("review");
@@ -310,21 +314,23 @@ export default function TalkScreen({ onChangeVoice }: { onChangeVoice: () => voi
           label="Run Agent"
           className="w-full"
         />
-        <GlassButton
-          size={btnSize}
-          onClick={() => setShowChat(true)}
-          variant="ghost"
-          icon={
-            <span className="relative text-gray-500">
-              <ChatIcon />
-              {activeChatId && (
-                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-green-500" />
-              )}
-            </span>
-          }
-          label="Chat"
-          className="w-full"
-        />
+        {cameraOn && (
+          <GlassButton
+            size={btnSize}
+            onClick={() => setShowChat(true)}
+            variant="ghost"
+            icon={
+              <span className="relative text-gray-500">
+                <ChatIcon />
+                {activeChatId && (
+                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-green-500" />
+                )}
+              </span>
+            }
+            label="Chat"
+            className="w-full"
+          />
+        )}
         <GlassButton
           size={btnSize}
           onClick={() => setShowAbout(true)}

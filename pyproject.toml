@@ -15,6 +15,7 @@ dependencies = [
     "transformers==4.44.2",
     "anthropic",
     "langgraph",
+    "psycopg[binary]",
     "langchain-anthropic",
     "python-dotenv",
     "inworld-tts",

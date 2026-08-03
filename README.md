@@ -12,7 +12,9 @@ last 10 messages act as the agent's short-term memory. The first `generate` pass
 deliberately **stateless** — only `reflect` (and the single revision pass) sees the
 conversation, so it can catch corrections that read well in isolation but are wrong
 in context (e.g. "Where's my bill?" → "Where's my pill?" after a nurse mentioned
-medication). Chats live in the browser (localStorage); only the text window is sent.
+medication). Chats persist in Supabase Postgres (sigma-style `chat_memory` +
+`chat_messages` tables) behind `/api/chats`; a scheduled job pings `/api/db_ping`
+every 5 minutes so the free-tier database never pauses.
 
 ```
 webcam clip ─▶ vsr (Auto-AVSR) ─▶ generate ─▶ reflect ─▶ response + steps ─▶ GUI / TTS
@@ -33,7 +35,8 @@ webcam clip ─▶ vsr (Auto-AVSR) ─▶ generate ─▶ reflect ─▶ respons
 | `tests/`    | Eval suite (word-overlap F1) for the full clip → agent path. |
 
 **Privacy:** uploaded clips are processed in a temp file and deleted in a `finally`
-block immediately after inference. Video is never persisted; only text leaves the device.
+block immediately after inference. Video is never persisted; only text leaves the
+device (chat text is stored in the Supabase chat store).
 
 ### API endpoints (no auth)
 
@@ -46,6 +49,8 @@ block immediately after inference. Video is never persisted; only text leaves th
 | `POST /api/execute_lips`     | mp4/webm clip (+ optional `conversation` form field) → same shape (VSR → agent); steps start with `vsr` |
 | `POST /speak`                | `{ text, voice_id }` → audio + word timestamps (Inworld TTS)       |
 | `GET  /voices` · `POST /voice/select` · `POST /voice/enroll` | voice catalog / selection / cloning |
+| `GET/POST /api/chats` · `DELETE /api/chats/{id}` · `GET/POST /api/chats/{id}/messages` | Supabase-backed chat store (conversations + messages) |
+| `GET  /api/db_ping`          | keep-alive `SELECT 1` (hit by a 5-min scheduled job)               |
 | `GET  /health`               | liveness                                                           |
 
 `steps` lists every model call in order as `{ module, prompt, response }`, with

@@ -32,12 +32,17 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
     setResult(null);
     try {
       // capture the memory window BEFORE appending the new prediction
-      const history = activeChatId ? historyWindow(activeChatId) : undefined;
+      const history = activeChatId ? await historyWindow(activeChatId) : undefined;
       const res = await executeText(prompt.trim(), history);
       if (activeChatId) {
-        appendMessage(activeChatId, "self", res.response, res.steps);
+        try {
+          await appendMessage(activeChatId, "self", res.response, res.steps);
+          setPrompt("");
+        } catch {
+          // store hiccup: don't lose the prediction
+          setResult(res);
+        }
         touch();
-        setPrompt("");
       } else {
         setResult(res);
       }
@@ -72,18 +77,31 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
-          {/* conversation (second character) */}
-          <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Conversation
-          </label>
-          <div className="mb-4 mt-1.5">
-            <ChatPanel />
+          {/* conversation (second character) - optional context, styled apart */}
+          <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-3">
+            <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-sky-600">
+              <ChatBubbleIcon />
+              Conversation · optional context
+            </label>
+            <div className="mt-2">
+              <ChatPanel />
+            </div>
           </div>
 
-          {/* preset picker */}
-          <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Preset incorrect sentences
-          </label>
+          {/* main input */}
+          <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+                Sentence to correct · main input
+              </label>
+              <span aria-hidden className="animate-bounce text-lg leading-none">
+                👇
+              </span>
+            </div>
+
+            <label className="mt-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Preset incorrect sentences
+            </label>
           <div className="relative mt-1.5">
             <select
               value={PRESETS.includes(prompt) ? prompt : ""}
@@ -126,6 +144,7 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
             {running ? <Spinner size={20} light /> : <BoltIcon />}
             {running ? "Running…" : "Run Agent"}
           </button>
+          </div>
 
           {error && (
             <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-600">
@@ -160,5 +179,11 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
 const BoltIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
     <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+  </svg>
+);
+
+const ChatBubbleIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );

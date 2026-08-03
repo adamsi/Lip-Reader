@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import config, meta, tts
+from . import config, db, meta, tts
 from .agent import run_agent
 
 logging.basicConfig(level=logging.INFO)
@@ -80,6 +80,82 @@ def execute(body: ExecuteBody):
         log.exception("agent failed")
         return _err(f"agent failed: {e}")
     return _ok(result["response"], result["steps"])
+
+
+# --- chat store (Supabase Postgres, sigma-agent-server shape) ---------------
+
+class CreateChatBody(BaseModel):
+    title: str = "New chat"
+
+
+class AppendMessageBody(BaseModel):
+    role: Literal["self", "other"]
+    content: str
+    steps: list[dict] | None = None
+
+
+@app.get("/api/chats")
+def chats_list():
+    try:
+        return {"conversations": db.list_conversations()}
+    except Exception as e:  # noqa: BLE001
+        log.exception("list chats failed")
+        raise HTTPException(status_code=503, detail=f"chat store unavailable: {e}")
+
+
+@app.post("/api/chats")
+def chats_create(body: CreateChatBody):
+    try:
+        return db.create_conversation((body.title or "New chat").strip()[:256])
+    except Exception as e:  # noqa: BLE001
+        log.exception("create chat failed")
+        raise HTTPException(status_code=503, detail=f"chat store unavailable: {e}")
+
+
+@app.delete("/api/chats/{chat_id}")
+def chats_delete(chat_id: str):
+    try:
+        found = db.delete_conversation(chat_id)
+    except Exception as e:  # noqa: BLE001
+        log.exception("delete chat failed")
+        raise HTTPException(status_code=503, detail=f"chat store unavailable: {e}")
+    if not found:
+        raise HTTPException(status_code=404, detail="chat not found")
+    return {"deleted": chat_id}
+
+
+@app.get("/api/chats/{chat_id}/messages")
+def chats_messages(chat_id: str):
+    try:
+        return {"messages": db.get_messages(chat_id)}
+    except Exception as e:  # noqa: BLE001
+        log.exception("get messages failed")
+        raise HTTPException(status_code=503, detail=f"chat store unavailable: {e}")
+
+
+@app.post("/api/chats/{chat_id}/messages")
+def chats_append(chat_id: str, body: AppendMessageBody):
+    text = body.content.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="content is required")
+    try:
+        msg = db.append_message(chat_id, body.role, text, body.steps)
+    except Exception as e:  # noqa: BLE001
+        log.exception("append message failed")
+        raise HTTPException(status_code=503, detail=f"chat store unavailable: {e}")
+    if msg is None:
+        raise HTTPException(status_code=404, detail="chat not found")
+    return msg
+
+
+@app.get("/api/db_ping")
+def db_ping():
+    """Keep-alive: a scheduled job hits this so the Supabase project never pauses."""
+    try:
+        db.ping()
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=503, detail=f"db unreachable: {e}")
+    return {"status": "ok", "db": 1}
 
 
 # --- supporting endpoints (unchanged contracts) ----------------------------

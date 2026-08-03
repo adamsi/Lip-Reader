@@ -19,10 +19,13 @@ webcam ─▶ short mp4 clip ─▶ vsr (Auto-AVSR lip-reading)
                                         ▼
                 on-screen text + steps trace  +  optional TTS voice clone
 ```
-- Conversations (second character): chats live client-side (localStorage,
-  `app/src/lib/chat.ts`, sigma-agent-server-style repository + last-10 window).
-  `/api/execute` and `/api/execute_lips` take an optional `conversation` history;
-  the first generate pass never sees it — only reflect and the revision pass do.
+- Conversations (second character): chats persist in Supabase Postgres
+  (`backend/app/db.py`, sigma-agent-server-style `chat_memory`/`chat_messages`
+  + last-10 window) behind `/api/chats`; `app/src/lib/chat.ts` is the API
+  client. `/api/execute` and `/api/execute_lips` take an optional
+  `conversation` history; the first generate pass never sees it — only reflect
+  and the revision pass do. `GET /api/db_ping` (SELECT 1) is hit every 5 min
+  by `.github/workflows/db-keepalive.yml` so the free-tier DB never pauses.
 - Three services:
   1. **SPA** (`app/`) — static, on Vercel.
   2. **API backend** (`backend/app/main.py`, FastAPI) — `/api/team_info`,
@@ -58,6 +61,7 @@ webcam ─▶ short mp4 clip ─▶ vsr (Auto-AVSR lip-reading)
 
 ## Conventions
 - Windows + **PowerShell** syntax (`$env:VAR`, `$null`). Package manager: **uv**.
-- Secrets in `.env` (gitignored): `ANTHROPIC_API_KEY`, optional `INWORLD_API_KEY` / `INWORLD_VOICE_ID`. Never commit secrets.
+- Secrets in `.env` (gitignored): `ANTHROPIC_API_KEY`, `DATABASE_URL` (Supabase
+  session pooler), optional `INWORLD_API_KEY` / `INWORLD_VOICE_ID`. Never commit secrets.
 - Model weights under `benchmarks/LRS3/` and temp `webcam*.mp4` clips are not in git.
 - Privacy: video stays local and is deleted after inference; only text leaves the device.

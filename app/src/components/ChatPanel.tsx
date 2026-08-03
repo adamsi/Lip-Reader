@@ -1,50 +1,94 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   appendMessage,
+  ChatMessage,
+  Conversation,
   createConversation,
   deleteConversation,
   getMessages,
   listConversations,
 } from "../lib/chat";
 import { useChat } from "../lib/chatContext";
+import Spinner from "./Spinner";
 import StepsTrace from "./StepsTrace";
 
 /**
  * Conversation picker + chat bubbles + "other person" input, shared by the
- * Run Agent panel and the Talk screen. Predictions are appended elsewhere
- * (after a successful agent run) as "self" messages.
+ * Run Agent panel and the Talk screen. Chats live in the Supabase-backed
+ * /api/chats store; predictions are appended elsewhere (after a successful
+ * agent run) as "self" messages.
  */
 export default function ChatPanel() {
   const { activeChatId, setActiveChatId, version, touch } = useChat();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [otherText, setOtherText] = useState("");
   const [openStepsId, setOpenStepsId] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [storeError, setStoreError] = useState(false);
 
-  const conversations = useMemo(() => listConversations(), [version]);
-  const messages = useMemo(
-    () => (activeChatId ? getMessages(activeChatId) : []),
-    [activeChatId, version]
-  );
+  useEffect(() => {
+    let stale = false;
+    setLoading(true);
+    Promise.all([
+      listConversations(),
+      activeChatId ? getMessages(activeChatId) : Promise.resolve([]),
+    ])
+      .then(([convs, msgs]) => {
+        if (stale) return;
+        setConversations(convs);
+        setMessages(msgs);
+        setStoreError(false);
+        // the active chat may have been deleted from another surface
+        if (activeChatId && !convs.some((c) => c.id === activeChatId)) {
+          setActiveChatId(null);
+        }
+      })
+      .catch(() => !stale && setStoreError(true))
+      .finally(() => !stale && setLoading(false));
+    return () => {
+      stale = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChatId, version]);
 
-  function newChat() {
-    const conv = createConversation();
-    setActiveChatId(conv.id);
-    touch();
+  async function withBusy(op: () => Promise<void>) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await op();
+      setStoreError(false);
+    } catch {
+      setStoreError(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function removeChat() {
-    if (!activeChatId) return;
-    deleteConversation(activeChatId);
-    setActiveChatId(null);
-    touch();
-  }
+  const newChat = () =>
+    withBusy(async () => {
+      const conv = await createConversation();
+      setActiveChatId(conv.id);
+      touch();
+    });
 
-  function addOther() {
-    const content = otherText.trim();
-    if (!content || !activeChatId) return;
-    appendMessage(activeChatId, "other", content);
-    setOtherText("");
-    touch();
-  }
+  const removeChat = () =>
+    withBusy(async () => {
+      if (!activeChatId) return;
+      await deleteConversation(activeChatId);
+      setActiveChatId(null);
+      touch();
+    });
+
+  const addOther = () =>
+    withBusy(async () => {
+      const content = otherText.trim();
+      if (!content || !activeChatId) return;
+      await appendMessage(activeChatId, "other", content);
+      setOtherText("");
+      touch();
+    });
 
   return (
     <div>
@@ -54,7 +98,7 @@ export default function ChatPanel() {
           <select
             value={activeChatId ?? ""}
             onChange={(e) => setActiveChatId(e.target.value || null)}
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-gray-900 outline-none focus:border-violet-500"
+            className="w-full appearance-none rounded-xl border border-sky-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-gray-900 outline-none focus:border-sky-500"
           >
             <option value="">No chat (single sentence)</option>
             {conversations.map((c) => (
@@ -73,26 +117,40 @@ export default function ChatPanel() {
         </div>
         <button
           onClick={newChat}
-          className="shrink-0 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+          disabled={busy}
+          className="shrink-0 rounded-xl border border-sky-200 bg-white px-3 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-40"
         >
           + New chat
         </button>
         {activeChatId && (
           <button
             onClick={removeChat}
+            disabled={busy}
             aria-label="Delete chat"
-            className="shrink-0 rounded-xl border border-gray-200 bg-white px-2.5 py-2.5 text-gray-400 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+            className="shrink-0 rounded-xl border border-sky-200 bg-white px-2.5 py-2.5 text-gray-400 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
           >
             <TrashIcon />
           </button>
         )}
       </div>
 
-      {activeChatId && (
+      {storeError && (
+        <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          The chat store is unreachable right now — you can still correct single
+          sentences below.
+        </p>
+      )}
+
+      {activeChatId && !storeError && (
         <>
           {/* bubbles */}
-          <div className="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-gray-100 bg-gray-50/60 p-3">
-            {messages.length === 0 && (
+          <div className="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-sky-100 bg-white/70 p-3">
+            {loading && messages.length === 0 && (
+              <div className="flex justify-center py-2">
+                <Spinner size={18} />
+              </div>
+            )}
+            {!loading && messages.length === 0 && (
               <p className="py-2 text-center text-xs text-gray-400">
                 Empty chat - add what the other person said, or send a prediction.
               </p>
@@ -134,14 +192,14 @@ export default function ChatPanel() {
               onChange={(e) => setOtherText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addOther()}
               placeholder="What did the other person say?"
-              className="flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-violet-500"
+              className="flex-1 rounded-xl border border-sky-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-sky-500"
             />
             <button
               onClick={addOther}
-              disabled={!otherText.trim()}
-              className="shrink-0 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-40"
+              disabled={!otherText.trim() || busy}
+              className="shrink-0 rounded-xl border border-sky-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-40"
             >
-              Add
+              {busy ? <Spinner size={16} /> : "Add"}
             </button>
           </div>
         </>
