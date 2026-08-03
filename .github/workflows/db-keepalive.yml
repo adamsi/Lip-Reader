@@ -14,4 +14,4 @@ jobs:
     steps:
       - name: SELECT 1 via /api/db_ping
         run: |
-          curl -sS --max-time 30 --retry 2 https://chaplin-ai.vercel.app/api/db_ping
+          curl -sSf --max-time 30 --retry 2 https://chaplin-ai.vercel.app/api/db_ping
