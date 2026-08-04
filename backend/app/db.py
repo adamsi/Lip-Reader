@@ -39,27 +39,41 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id
 -- Preset demo conversations (is_preset = TRUE -> protected from delete/append).
 -- The description IS the noisy sentence to correct; each preset carries one
 -- other-person message. Presets 1-2 are only correctable via that context
--- (reflect revises); presets 3-6 are correctable by generate alone (reflect
--- approves). Idempotent: fixed UUIDs + ON CONFLICT / NOT EXISTS.
+-- (the context-free generate fails, reflect revises); presets 3-6 are
+-- correctable by generate alone (reflect approves). Self-healing: rows are
+-- upserted and stale preset messages replaced, so editing this seed list is
+-- enough to change the presets everywhere.
 INSERT INTO chat_memory (conversation_id, description, is_preset) VALUES
-    ('00000000-0000-0000-0000-000000000001', 'WHERES MY BILL', TRUE),
-    ('00000000-0000-0000-0000-000000000002', 'CAN YOU TURN UP THE HEAT', TRUE),
+    ('00000000-0000-0000-0000-000000000001', 'LEGNOP JALES', TRUE),
+    ('00000000-0000-0000-0000-000000000002', 'WHERES MY BILL', TRUE),
     ('00000000-0000-0000-0000-000000000003', 'IM SO EXCITED TO ME YOU TODAY', TRUE),
     ('00000000-0000-0000-0000-000000000004', 'PLEASE BRING ME A GLASS OF WHAT ER', TRUE),
     ('00000000-0000-0000-0000-000000000005', 'I FILL A LOT OF PAIN IN MY BAG', TRUE),
     ('00000000-0000-0000-0000-000000000006', 'I WOULD LIKE TO SEA MY FAMILY TO MORROW', TRUE)
-ON CONFLICT (conversation_id) DO NOTHING;
+ON CONFLICT (conversation_id)
+    DO UPDATE SET description = EXCLUDED.description, is_preset = TRUE;
+DELETE FROM chat_messages
+WHERE conversation_id IN (SELECT conversation_id FROM chat_memory WHERE is_preset)
+  AND (conversation_id::text, content) NOT IN (VALUES
+    ('00000000-0000-0000-0000-000000000001', 'Who is your favorite NBA player?'),
+    ('00000000-0000-0000-0000-000000000002', 'The nurse has your evening medication ready.'),
+    ('00000000-0000-0000-0000-000000000003', 'Good morning! The new doctor will visit you soon.'),
+    ('00000000-0000-0000-0000-000000000004', 'Lunch is almost ready for you.'),
+    ('00000000-0000-0000-0000-000000000005', 'How are you feeling after the surgery?'),
+    ('00000000-0000-0000-0000-000000000006', 'Visiting hours are from ten to noon.')
+);
 INSERT INTO chat_messages (conversation_id, type, content)
 SELECT v.cid::uuid, 'OTHER', v.msg FROM (VALUES
-    ('00000000-0000-0000-0000-000000000001', 'The nurse has your evening medication ready.'),
-    ('00000000-0000-0000-0000-000000000002', 'I love this song, it''s my favorite.'),
+    ('00000000-0000-0000-0000-000000000001', 'Who is your favorite NBA player?'),
+    ('00000000-0000-0000-0000-000000000002', 'The nurse has your evening medication ready.'),
     ('00000000-0000-0000-0000-000000000003', 'Good morning! The new doctor will visit you soon.'),
     ('00000000-0000-0000-0000-000000000004', 'Lunch is almost ready for you.'),
     ('00000000-0000-0000-0000-000000000005', 'How are you feeling after the surgery?'),
     ('00000000-0000-0000-0000-000000000006', 'Visiting hours are from ten to noon.')
 ) AS v(cid, msg)
 WHERE NOT EXISTS (
-    SELECT 1 FROM chat_messages m WHERE m.conversation_id = v.cid::uuid
+    SELECT 1 FROM chat_messages m
+    WHERE m.conversation_id = v.cid::uuid AND m.content = v.msg
 );
 """
 
@@ -71,7 +85,18 @@ _schema_ready = False
 def _connect() -> psycopg.Connection:
     if not config.DATABASE_URL:
         raise RuntimeError("DATABASE_URL not configured")
-    return psycopg.connect(config.DATABASE_URL, autocommit=True, row_factory=dict_row)
+    return psycopg.connect(
+        config.DATABASE_URL,
+        autocommit=True,
+        row_factory=dict_row,
+        connect_timeout=10,
+        # pooler-safe (no server-side prepared statements) + dead-peer detection
+        prepare_threshold=None,
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=3,
+    )
 
 
 def _get_conn() -> psycopg.Connection:
@@ -86,11 +111,15 @@ def _get_conn() -> psycopg.Connection:
 
 
 def _run(fn):
-    """Run ``fn(conn)``, reconnecting once if the cached connection went stale."""
+    """Run ``fn(conn)``, reconnecting once if the cached connection went stale.
+
+    Retries on any psycopg error class (OperationalError, InterfaceError, ...):
+    a frozen/thawed serverless instance can surface a dead socket as either.
+    """
     global _conn
     try:
         return fn(_get_conn())
-    except psycopg.OperationalError:
+    except psycopg.Error:
         with _lock:
             if _conn is not None:
                 try:

@@ -11,12 +11,24 @@ export type Conversation = { id: string; title: string; seq: number; isPreset: b
 export const MEMORY_WINDOW = 10;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
-  return res.json();
+  const attempt = async (): Promise<T> => {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      ...init,
+    });
+    if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+    return res.json();
+  };
+  try {
+    return await attempt();
+  } catch (e) {
+    // reads are safe to retry once (rides out serverless cold starts and
+    // stale DB connections); mutations are not
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (method !== "GET") throw e;
+    await new Promise((r) => setTimeout(r, 800));
+    return attempt();
+  }
 }
 
 type ConversationWire = { id: string; title: string; seq: number; is_preset: boolean };
