@@ -37,7 +37,8 @@ export default function ChatPanel() {
     ])
       .then(([convs, msgs]) => {
         if (stale) return;
-        setConversations(convs);
+        // presets are read-only demo conversations - not offered as chats
+        setConversations(convs.filter((c) => !c.isPreset));
         setMessages(msgs);
         setStoreError(false);
         // the active chat may have been deleted from another surface

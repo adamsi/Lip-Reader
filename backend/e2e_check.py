@@ -197,11 +197,19 @@ def main() -> int:
         client.post(f"/api/chats/{chat['id']}/messages",
                     json={"role": "other", "content": "e2e check message"})
         msgs = client.get(f"/api/chats/{chat['id']}/messages").json()["messages"]
-        listed = any(c["id"] == chat["id"]
-                     for c in client.get("/api/chats").json()["conversations"])
+        conversations = client.get("/api/chats").json()["conversations"]
+        listed = any(c["id"] == chat["id"] for c in conversations)
         deleted = client.delete(f"/api/chats/{chat['id']}").status_code == 200
-        ok["chat_store"] = bool(ping_ok and len(msgs) == 1 and listed and deleted)
-        print(f"create/append/list/delete: {ok['chat_store']}")
+        presets = [c for c in conversations if c["is_preset"]]
+        preset_guard = (
+            len(presets) == 6
+            and client.delete(f"/api/chats/{presets[0]['id']}").status_code == 403
+            and client.post(f"/api/chats/{presets[0]['id']}/messages",
+                            json={"role": "self", "content": "x"}).status_code == 403
+        )
+        ok["chat_store"] = bool(ping_ok and len(msgs) == 1 and listed and deleted and preset_guard)
+        print(f"create/append/list/delete: {bool(len(msgs) == 1 and listed and deleted)}")
+        print(f"presets seeded + protected (6, no delete/append): {preset_guard}")
     except Exception as e:  # noqa: BLE001
         print(f"chat store check failed: {e}")
 

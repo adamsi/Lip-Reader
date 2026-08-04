@@ -26,6 +26,10 @@ webcam ─▶ short mp4 clip ─▶ vsr (Auto-AVSR lip-reading)
   `conversation` history; the first generate pass never sees it — only reflect
   and the revision pass do. `GET /api/db_ping` (SELECT 1) is hit every 5 min
   by `.github/workflows/db-keepalive.yml` so the free-tier DB never pauses.
+  Six demo presets (noisy sentence as title + one other-message) are seeded by
+  the DDL in `db.py` with `is_preset = TRUE` — delete/append return 403; the
+  Run Agent modal offers "Demo presets" (2 revise via context, 4 approve) vs
+  "Free text" (optional chat) modes.
 - Three services:
   1. **SPA** (`app/`) — static, on Vercel.
   2. **API backend** (`backend/app/main.py`, FastAPI) — `/api/team_info`,

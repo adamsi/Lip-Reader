@@ -21,8 +21,10 @@ _DDL = """
 CREATE TABLE IF NOT EXISTS chat_memory (
     conversation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     description VARCHAR(256),
-    sequence_number BIGSERIAL
+    sequence_number BIGSERIAL,
+    is_preset BOOLEAN NOT NULL DEFAULT FALSE
 );
+ALTER TABLE chat_memory ADD COLUMN IF NOT EXISTS is_preset BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE TABLE IF NOT EXISTS chat_messages (
     id BIGSERIAL PRIMARY KEY,
     conversation_id UUID NOT NULL
@@ -33,6 +35,32 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id
     ON chat_messages (conversation_id);
+
+-- Preset demo conversations (is_preset = TRUE -> protected from delete/append).
+-- The description IS the noisy sentence to correct; each preset carries one
+-- other-person message. Presets 1-2 are only correctable via that context
+-- (reflect revises); presets 3-6 are correctable by generate alone (reflect
+-- approves). Idempotent: fixed UUIDs + ON CONFLICT / NOT EXISTS.
+INSERT INTO chat_memory (conversation_id, description, is_preset) VALUES
+    ('00000000-0000-0000-0000-000000000001', 'WHERES MY BILL', TRUE),
+    ('00000000-0000-0000-0000-000000000002', 'CAN YOU TURN UP THE HEAT', TRUE),
+    ('00000000-0000-0000-0000-000000000003', 'IM SO EXCITED TO ME YOU TODAY', TRUE),
+    ('00000000-0000-0000-0000-000000000004', 'PLEASE BRING ME A GLASS OF WHAT ER', TRUE),
+    ('00000000-0000-0000-0000-000000000005', 'I FILL A LOT OF PAIN IN MY BAG', TRUE),
+    ('00000000-0000-0000-0000-000000000006', 'I WOULD LIKE TO SEA MY FAMILY TO MORROW', TRUE)
+ON CONFLICT (conversation_id) DO NOTHING;
+INSERT INTO chat_messages (conversation_id, type, content)
+SELECT v.cid::uuid, 'OTHER', v.msg FROM (VALUES
+    ('00000000-0000-0000-0000-000000000001', 'The nurse has your evening medication ready.'),
+    ('00000000-0000-0000-0000-000000000002', 'I love this song, it''s my favorite.'),
+    ('00000000-0000-0000-0000-000000000003', 'Good morning! The new doctor will visit you soon.'),
+    ('00000000-0000-0000-0000-000000000004', 'Lunch is almost ready for you.'),
+    ('00000000-0000-0000-0000-000000000005', 'How are you feeling after the surgery?'),
+    ('00000000-0000-0000-0000-000000000006', 'Visiting hours are from ten to noon.')
+) AS v(cid, msg)
+WHERE NOT EXISTS (
+    SELECT 1 FROM chat_messages m WHERE m.conversation_id = v.cid::uuid
+);
 """
 
 _lock = threading.Lock()
@@ -82,18 +110,29 @@ def ping() -> bool:
 def create_conversation(title: str) -> dict:
     row = _run(lambda c: c.execute(
         "INSERT INTO chat_memory (description) VALUES (%s) "
-        "RETURNING conversation_id, description, sequence_number",
+        "RETURNING conversation_id, description, sequence_number, is_preset",
         (title,),
     ).fetchone())
     return _conv_out(row)
 
 
 def list_conversations() -> list[dict]:
+    # presets first in seed order, then user chats newest-first
     rows = _run(lambda c: c.execute(
-        "SELECT conversation_id, description, sequence_number "
-        "FROM chat_memory ORDER BY sequence_number DESC"
+        "SELECT conversation_id, description, sequence_number, is_preset "
+        "FROM chat_memory ORDER BY is_preset DESC, "
+        "CASE WHEN is_preset THEN sequence_number END ASC, sequence_number DESC"
     ).fetchall())
     return [_conv_out(r) for r in rows]
+
+
+def is_preset(conversation_id: str) -> bool | None:
+    """True/False for an existing conversation, None when it doesn't exist."""
+    row = _run(lambda c: c.execute(
+        "SELECT is_preset FROM chat_memory WHERE conversation_id = %s",
+        (conversation_id,),
+    ).fetchone())
+    return None if row is None else bool(row["is_preset"])
 
 
 def get_messages(conversation_id: str) -> list[dict]:
@@ -111,7 +150,7 @@ def append_message(conversation_id: str, role: str, content: str,
         row = c.execute(
             "INSERT INTO chat_messages (conversation_id, type, content, steps) "
             "SELECT %s, %s, %s, %s WHERE EXISTS "
-            "(SELECT 1 FROM chat_memory WHERE conversation_id = %s) "
+            "(SELECT 1 FROM chat_memory WHERE conversation_id = %s AND NOT is_preset) "
             "RETURNING id, type, content, steps",
             (conversation_id, role.upper(), content,
              json.dumps(steps) if steps else None, conversation_id),
@@ -131,9 +170,9 @@ def append_message(conversation_id: str, role: str, content: str,
 
 
 def delete_conversation(conversation_id: str) -> bool:
-    # chat_messages cascade via the FK
+    # chat_messages cascade via the FK; presets are protected
     return _run(lambda c: c.execute(
-        "DELETE FROM chat_memory WHERE conversation_id = %s "
+        "DELETE FROM chat_memory WHERE conversation_id = %s AND NOT is_preset "
         "RETURNING conversation_id",
         (conversation_id,),
     ).fetchone()) is not None
@@ -149,6 +188,7 @@ def _conv_out(row: dict) -> dict:
         "id": str(row["conversation_id"]),
         "title": row["description"] or "New chat",
         "seq": row["sequence_number"],
+        "is_preset": bool(row["is_preset"]),
     }
 
 

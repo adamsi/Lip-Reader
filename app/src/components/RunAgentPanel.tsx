@@ -1,50 +1,92 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { executeText, ExecuteResult } from "../lib/api";
-import { appendMessage, historyWindow } from "../lib/chat";
+import {
+  appendMessage,
+  ChatMessage,
+  Conversation,
+  getMessages,
+  historyWindow,
+  listConversations,
+} from "../lib/chat";
 import { useChat } from "../lib/chatContext";
 import ChatPanel from "./ChatPanel";
 import Spinner from "./Spinner";
 import StepsTrace from "./StepsTrace";
 
-const PRESETS = [
-  "IM SO EXCITED TO ME YOU TODAY",
-  "PLEASE BRING ME A GLASS OF WHAT ER",
-  "CAN YOU TURN OF THE LIGHT PLEASE",
-  "I FILL A LOT OF PAIN IN MY BAG",
-  "I WOULD LIKE TO SEA MY FAMILY TO MORROW",
-  "THANK YOU DARLING YOU ARE JUST TOO KIND TO DAY",
-  // ambiguous alone - the reflect step fixes them from the chat context
-  "WHERES MY BILL",
-  "CAN YOU TURN UP THE HEAT",
-];
+type Mode = "presets" | "free";
 
 export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
   const { activeChatId, touch } = useChat();
+  const [mode, setModeRaw] = useState<Mode>("presets");
+  const [presets, setPresets] = useState<Conversation[]>([]);
+  const [presetId, setPresetId] = useState("");
+  const [presetContext, setPresetContext] = useState<ChatMessage[]>([]);
   const [prompt, setPrompt] = useState("");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ExecuteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // seeded demo presets (is_preset rows: noisy sentence + one other-message)
+  useEffect(() => {
+    listConversations()
+      .then((cs) => {
+        const p = cs.filter((c) => c.isPreset);
+        setPresets(p);
+        setPresetId((cur) => cur || p[0]?.id || "");
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!presetId) {
+      setPresetContext([]);
+      return;
+    }
+    let stale = false;
+    getMessages(presetId)
+      .then((m) => !stale && setPresetContext(m))
+      .catch(() => {});
+    return () => {
+      stale = true;
+    };
+  }, [presetId]);
+
+  const selectedPreset = presets.find((p) => p.id === presetId) ?? null;
+  const canRun = mode === "presets" ? !!selectedPreset : !!prompt.trim();
+
+  function setMode(m: Mode) {
+    setModeRaw(m);
+    setResult(null);
+    setError(null);
+  }
+
   async function run() {
-    if (!prompt.trim() || running) return;
+    if (!canRun || running) return;
     setRunning(true);
     setError(null);
     setResult(null);
     try {
-      // capture the memory window BEFORE appending the new prediction
-      const history = activeChatId ? await historyWindow(activeChatId) : undefined;
-      const res = await executeText(prompt.trim(), history);
-      if (activeChatId) {
-        try {
-          await appendMessage(activeChatId, "self", res.response, res.steps);
-          setPrompt("");
-        } catch {
-          // store hiccup: don't lose the prediction
+      if (mode === "presets" && selectedPreset) {
+        // preset conversations are read-only demos: run with their context,
+        // show the result inline, never append to them
+        const history = presetContext.map(({ role, content }) => ({ role, content }));
+        setResult(await executeText(selectedPreset.title, history));
+      } else {
+        // capture the memory window BEFORE appending the new prediction
+        const history = activeChatId ? await historyWindow(activeChatId) : undefined;
+        const res = await executeText(prompt.trim(), history);
+        if (activeChatId) {
+          try {
+            await appendMessage(activeChatId, "self", res.response, res.steps);
+            setPrompt("");
+          } catch {
+            // store hiccup: don't lose the prediction
+            setResult(res);
+          }
+          touch();
+        } else {
           setResult(res);
         }
-        touch();
-      } else {
-        setResult(res);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -77,74 +119,108 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
-          {/* conversation (second character) - optional context, styled apart */}
-          <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-3">
-            <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-sky-600">
-              <ChatBubbleIcon />
-              Conversation · optional context
-            </label>
-            <div className="mt-2">
-              <ChatPanel />
-            </div>
+          {/* mode switch */}
+          <div className="flex rounded-full border border-gray-200 bg-gray-100 p-1 text-sm font-semibold">
+            <ModeTab active={mode === "presets"} onClick={() => setMode("presets")}>
+              Demo presets
+            </ModeTab>
+            <ModeTab active={mode === "free"} onClick={() => setMode("free")}>
+              Free text
+            </ModeTab>
           </div>
 
-          {/* main input */}
-          <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-3">
-            <div className="flex items-center justify-between">
+          {mode === "presets" ? (
+            <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-3">
               <label className="text-xs font-semibold uppercase tracking-wide text-violet-600">
-                Sentence to correct · main input
+                Preset · noisy sentence with its conversation
               </label>
-              <span aria-hidden className="animate-bounce text-lg leading-none">
-                👇
-              </span>
+              <div className="relative mt-1.5">
+                <select
+                  value={presetId}
+                  onChange={(e) => {
+                    setPresetId(e.target.value);
+                    setResult(null);
+                    setError(null);
+                  }}
+                  className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-gray-900 outline-none focus:border-violet-500"
+                >
+                  {presets.length === 0 && <option value="">Loading presets…</option>}
+                  {presets.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+                <svg
+                  className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+
+              {selectedPreset && (
+                <div className="mt-3 rounded-2xl border border-gray-100 bg-white/80 p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    The conversation so far
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {presetContext.map((m) => (
+                      <div key={m.id} className="flex justify-start">
+                        <div className="max-w-[80%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3.5 py-2 text-left text-sm text-gray-800">
+                          {m.content}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex justify-end">
+                      <div className="max-w-[80%] rounded-2xl rounded-br-md border border-dashed border-violet-300 bg-violet-50 px-3.5 py-2 text-right text-sm text-violet-700">
+                        {selectedPreset.title}
+                        <span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wide text-violet-400">
+                          your lip-read sentence, to be corrected
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <RunButton onClick={run} disabled={!canRun || running} running={running} />
             </div>
+          ) : (
+            <>
+              {/* conversation (second character) - optional context */}
+              <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50/70 p-3">
+                <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-sky-600">
+                  <ChatBubbleIcon />
+                  Conversation · optional context
+                </label>
+                <div className="mt-2">
+                  <ChatPanel />
+                </div>
+              </div>
 
-            <label className="mt-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Preset incorrect sentences
-            </label>
-          <div className="relative mt-1.5">
-            <select
-              value={PRESETS.includes(prompt) ? prompt : ""}
-              onChange={(e) => e.target.value && setPrompt(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-gray-900 outline-none focus:border-violet-500"
-            >
-              <option value="">Choose a preset…</option>
-              {PRESETS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-            <svg
-              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-              width="16" height="16" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
-
-          {/* free text */}
-          <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Or enter any text to correct
-          </label>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows={3}
-            placeholder="E.G. IM SO EXCITED TO ME YOU TODAY"
-            className="mt-1.5 w-full resize-none rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-violet-500"
-          />
-
-          <button
-            onClick={run}
-            disabled={!prompt.trim() || running}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-3 text-base font-bold text-white shadow-[0_8px_24px_rgba(109,40,217,0.3)] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
-          >
-            {running ? <Spinner size={20} light /> : <BoltIcon />}
-            {running ? "Running…" : "Run Agent"}
-          </button>
-          </div>
+              {/* main input */}
+              <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+                    Sentence to correct · main input
+                  </label>
+                  <span aria-hidden className="animate-bounce text-lg leading-none">
+                    👇
+                  </span>
+                </div>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={3}
+                  placeholder="E.G. IM SO EXCITED TO ME YOU TODAY"
+                  className="mt-1.5 w-full resize-none rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-violet-500"
+                />
+                <RunButton onClick={run} disabled={!canRun || running} running={running} />
+              </div>
+            </>
+          )}
 
           {error && (
             <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-600">
@@ -152,8 +228,8 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
             </p>
           )}
 
-          {/* final response (no-chat mode; in a chat it appears as a bubble) */}
-          {result && !activeChatId && (
+          {/* final response (presets always inline; free text inline unless in a chat) */}
+          {result && (mode === "presets" || !activeChatId) && (
             <div className="mt-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Agent response
@@ -164,6 +240,11 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
 
               <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Steps trace · {result.steps.length} calls
+                {mode === "presets" && result.steps.length >= 3 && (
+                  <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-600">
+                    reflect revised via the conversation
+                  </span>
+                )}
               </div>
               <div className="mt-1.5">
                 <StepsTrace steps={result.steps} />
@@ -173,6 +254,48 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function ModeTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 rounded-full py-1.5 transition ${
+        active ? "bg-white text-violet-700 shadow" : "text-gray-500 hover:text-gray-700"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function RunButton({
+  onClick,
+  disabled,
+  running,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  running: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-3 text-base font-bold text-white shadow-[0_8px_24px_rgba(109,40,217,0.3)] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
+    >
+      {running ? <Spinner size={20} light /> : <BoltIcon />}
+      {running ? "Running…" : "Run Agent"}
+    </button>
   );
 }
 

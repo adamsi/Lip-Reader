@@ -116,6 +116,10 @@ def chats_create(body: CreateChatBody):
 def chats_delete(chat_id: str):
     try:
         found = db.delete_conversation(chat_id)
+        if not found and db.is_preset(chat_id):
+            raise HTTPException(status_code=403, detail="preset chats cannot be deleted")
+    except HTTPException:
+        raise
     except Exception as e:  # noqa: BLE001
         log.exception("delete chat failed")
         raise HTTPException(status_code=503, detail=f"chat store unavailable: {e}")
@@ -140,6 +144,10 @@ def chats_append(chat_id: str, body: AppendMessageBody):
         raise HTTPException(status_code=400, detail="content is required")
     try:
         msg = db.append_message(chat_id, body.role, text, body.steps)
+        if msg is None and db.is_preset(chat_id):
+            raise HTTPException(status_code=403, detail="preset chats are read-only")
+    except HTTPException:
+        raise
     except Exception as e:  # noqa: BLE001
         log.exception("append message failed")
         raise HTTPException(status_code=503, detail=f"chat store unavailable: {e}")
