@@ -1,13 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { executeText, ExecuteResult } from "../lib/api";
-import {
-  appendMessage,
-  ChatMessage,
-  Conversation,
-  getMessages,
-  historyWindow,
-  listConversations,
-} from "../lib/chat";
+import { appendMessage, historyWindow } from "../lib/chat";
+import { DEMO_PRESETS } from "../lib/presets";
 import { useChat } from "../lib/chatContext";
 import ChatPanel from "./ChatPanel";
 import Spinner from "./Spinner";
@@ -18,40 +12,17 @@ type Mode = "presets" | "free";
 export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
   const { activeChatId, touch } = useChat();
   const [mode, setModeRaw] = useState<Mode>("presets");
-  const [presets, setPresets] = useState<Conversation[]>([]);
-  const [presetId, setPresetId] = useState("");
-  const [presetContext, setPresetContext] = useState<ChatMessage[]>([]);
+  const [presetId, setPresetId] = useState(DEMO_PRESETS[0].id);
   const [prompt, setPrompt] = useState("");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ExecuteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // seeded demo presets (is_preset rows: noisy sentence + one other-message)
-  useEffect(() => {
-    listConversations()
-      .then((cs) => {
-        const p = cs.filter((c) => c.isPreset);
-        setPresets(p);
-        setPresetId((cur) => cur || p[0]?.id || "");
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!presetId) {
-      setPresetContext([]);
-      return;
-    }
-    let stale = false;
-    getMessages(presetId)
-      .then((m) => !stale && setPresetContext(m))
-      .catch(() => {});
-    return () => {
-      stale = true;
-    };
-  }, [presetId]);
-
+  // demo presets are a static mirror of the DB seed (see lib/presets.ts):
+  // rendered instantly, no network round-trips
+  const presets = DEMO_PRESETS;
   const selectedPreset = presets.find((p) => p.id === presetId) ?? null;
+  const presetContext = selectedPreset?.context ?? [];
   const canRun = mode === "presets" ? !!selectedPreset : !!prompt.trim();
 
   function setMode(m: Mode) {
@@ -144,7 +115,6 @@ export default function RunAgentPanel({ onClose }: { onClose: () => void }) {
                   }}
                   className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-gray-900 outline-none focus:border-violet-500"
                 >
-                  {presets.length === 0 && <option value="">Loading presets…</option>}
                   {presets.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.title}
