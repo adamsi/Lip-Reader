@@ -15,10 +15,9 @@ class Review(BaseModel):
     # analysis comes first so the verdict is decided after checking the context
     analysis: str = Field(
         description=(
-            "One or two short sentences checking each content word of the "
-            "correction against the conversation (when shown): is it plausible "
-            "as the speaker's next utterance, or does a visually similar word "
-            "fit the context better?"
+            "One terse clause (max 12 words) checking the correction against "
+            "the conversation when shown: does each content word fit, or does "
+            "a visually similar word fit better?"
         )
     )
     verdict: Literal["approve", "revise"] = Field(

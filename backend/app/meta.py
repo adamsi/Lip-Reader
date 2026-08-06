@@ -29,9 +29,8 @@ _EXAMPLE_STEPS = [
         },
         "response": {
             "analysis": (
-                "The correction matches the raw transcription word for word, with "
-                "natural punctuation added (commas around \"darling\") and proper "
-                "capitalization. No conversation context to check against."
+                "All content words match: thank, you, darling, are, just, too, "
+                "kind, today. Correction adds proper punctuation and capitalization."
             ),
             "verdict": "approve",
             "feedback": "",
@@ -53,14 +52,12 @@ _CTX_TRANSCRIPT = (
     "You: Thank you, I was waiting for it."
 )
 _CTX_ANALYSIS = (
-    "The conversation is about evening medication being ready. Asking \"Where's "
-    "my bill?\" doesn't fit this context, but \"pill\" is visually very similar "
-    "to \"bill\" (p/b are classic lip-reading confusions) and \"Where's my "
-    "pill?\" fits perfectly."
+    "Speaker just received medication; asking for a bill seems contextually "
+    "implausible here."
 )
 _CTX_FEEDBACK = (
-    "'bill' should be 'pill' - p/b are visually identical on the lips, and the "
-    "conversation is about medication."
+    "The word 'bill' doesn't fit the context; the visually similar 'pill' makes "
+    "sense after receiving medication."
 )
 _CTX_STEPS = [
     {
