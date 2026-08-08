@@ -42,8 +42,6 @@ image = (
                 "https://chaplin-ai.vercel.app,"
                 "http://localhost:5173,http://localhost:4173"
             ),
-            "CUDA_LAUNCH_BLOCKING": "1",
-            "TORCH_SHOW_CPP_STACKTRACES": "1",
         }
     )
     .workdir(REMOTE_ROOT)
@@ -57,7 +55,7 @@ weights = modal.Volume.from_name("chaplin-weights")
 app = modal.App("chaplin-ai")
 
 
-@app.function(
+@app.cls(
     image=image,
     gpu="T4",
     volumes={f"{REMOTE_ROOT}/benchmarks": weights},
@@ -65,14 +63,28 @@ app = modal.App("chaplin-ai")
     timeout=600,
     scaledown_window=300,
     memory=8192,
+    enable_memory_snapshot=True,
+    experimental_options={"enable_gpu_snapshot": True},
 )
-@modal.asgi_app()
-def backend():
-    import os
-    import sys
+class Backend:
+    @modal.enter(snap=True)
+    def load_model(self):
+        # runs once per snapshot: torch import + VSR weights land on the GPU
+        # and get captured, so cold starts restore in seconds instead of
+        # re-loading from the network volume
+        import os
+        import sys
 
-    os.chdir(REMOTE_ROOT)
-    sys.path.insert(0, REMOTE_ROOT)
-    from backend.app.vsr_main import app as fastapi_app
+        os.chdir(REMOTE_ROOT)
+        sys.path.insert(0, REMOTE_ROOT)
+        from backend.app import vsr
 
-    return fastapi_app
+        vsr.get_model()
+
+    # label keeps the pre-class URL (adamsi--chaplin-ai-backend.modal.run),
+    # which the SPA hardcodes as VSR_BASE
+    @modal.asgi_app(label="chaplin-ai-backend")
+    def serve(self):
+        from backend.app.vsr_main import app as fastapi_app
+
+        return fastapi_app
